@@ -232,7 +232,9 @@ namespace PackViewer
             try
             {
                 _vm.Status = "Building folder list";
-                var imageFolder = Path.GetDirectoryName(_startFile);
+                // Check if input is folder or file
+                // In case of startFile is a file, using directory where file is belonging as a starting folder
+                var imageFolder = Directory.Exists(_startFile)? _startFile : Path.GetDirectoryName(_startFile);
                 _rootFolder = Path.GetFullPath(Path.Combine(imageFolder, @"..\"));
                 int cnt = 0;
                 AddFolders(imageFolder, "", 0, ref cnt);
