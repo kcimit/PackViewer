@@ -75,6 +75,7 @@
     <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Net" />
+    <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Core" />
@@ -93,23 +94,25 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="FileOps.cs" />
-    <Compile Include="libjpeg-turbo-net\DecompressedImage.cs" />
-    <Compile Include="libjpeg-turbo-net\Enums.cs" />
-    <Compile Include="libjpeg-turbo-net\NativeModulesLoader.cs" />
-    <Compile Include="libjpeg-turbo-net\Platform.cs" />
-    <Compile Include="libjpeg-turbo-net\Structs.cs" />
-    <Compile Include="libjpeg-turbo-net\TJCompressor.cs" />
-    <Compile Include="libjpeg-turbo-net\TJDecompressor.cs" />
-    <Compile Include="libjpeg-turbo-net\TJException.cs" />
-    <Compile Include="libjpeg-turbo-net\TJInitializer.cs" />
-    <Compile Include="libjpeg-turbo-net\TJRegion.cs" />
-    <Compile Include="libjpeg-turbo-net\TJTransformDescription.cs" />
-    <Compile Include="libjpeg-turbo-net\TJTransformer.cs" />
-    <Compile Include="libjpeg-turbo-net\TJUtils.cs" />
-    <Compile Include="libjpeg-turbo-net\TurboJpegImport.cs" />
-    <Compile Include="LibRawWrapper.cs" />
-    <Compile Include="ViewModelService.cs" />
+    <Compile Include="ImageProcess\ImageProcess.cs" />
+    <Compile Include="Services\FileOps.cs" />
+    <Compile Include="LibJpegTurboNet\DecompressedImage.cs" />
+    <Compile Include="LibJpegTurboNet\Enums.cs" />
+    <Compile Include="LibJpegTurboNet\NativeModulesLoader.cs" />
+    <Compile Include="LibJpegTurboNet\Platform.cs" />
+    <Compile Include="LibJpegTurboNet\Structs.cs" />
+    <Compile Include="LibJpegTurboNet\TJCompressor.cs" />
+    <Compile Include="LibJpegTurboNet\TJDecompressor.cs" />
+    <Compile Include="LibJpegTurboNet\TJException.cs" />
+    <Compile Include="LibJpegTurboNet\TJInitializer.cs" />
+    <Compile Include="LibJpegTurboNet\TJRegion.cs" />
+    <Compile Include="LibJpegTurboNet\TJTransformDescription.cs" />
+    <Compile Include="LibJpegTurboNet\TJTransformer.cs" />
+    <Compile Include="LibJpegTurboNet\TJUtils.cs" />
+    <Compile Include="LibJpegTurboNet\TurboJpegImport.cs" />
+    <Compile Include="LibRawWrapper\LibRawWrapper.cs" />
+    <Compile Include="Services\ViewModel.cs" />
+    <Compile Include="Services\ViewModelService.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -118,14 +121,14 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="CustomSearcher.cs" />
+    <Compile Include="Services\CustomSearcher.cs" />
     <Compile Include="MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="PackView.cs" />
+    <Compile Include="PackView\PackView.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -153,7 +156,7 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="libjpeg-turbo-net\turbojpeg.h" />
+    <Content Include="LibJpegTurboNet\turbojpeg.h" />
     <Content Include="libraw.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

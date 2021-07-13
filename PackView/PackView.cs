@@ -77,7 +77,7 @@ namespace PackViewer
         }
         private void EnqueuLoadingFiles(string currentFolder, string nextImageFolder)
         {
-            // If still reading the folders - no caching
+            // Prevent caching, if still need to get contents of all the subfolders
             if (!_allFoldersAreRead)
                 return;
 
@@ -122,23 +122,9 @@ namespace PackViewer
                 using (Stream BitmapStream = System.IO.File.Open(file, System.IO.FileMode.Open))
                 {
                     byte[] array = new byte[new FileInfo(file).Length];
-                    ReadWholeArray(BitmapStream, array);
+                    FileOps.ReadWholeArray(BitmapStream, array);
                     return array;
                 }
-            }
-        }
-        public static void ReadWholeArray(Stream stream, byte[] data)
-        {
-            int offset = 0;
-            int remaining = data.Length;
-            while (remaining > 0)
-            {
-                int read = stream.Read(data, offset, remaining);
-                if (read <= 0)
-                    throw new EndOfStreamException
-                        ($"End of stream reached with {remaining} bytes left to read");
-                remaining -= read;
-                offset += read;
             }
         }
         public void AddImage(string file, string key)
@@ -154,7 +140,7 @@ namespace PackViewer
                         using (Stream BitmapStream = System.IO.File.Open(file, System.IO.FileMode.Open))
                         {
                             byte[] array = new byte[new FileInfo(file).Length];
-                            ReadWholeArray(BitmapStream, array);
+                            FileOps.ReadWholeArray(BitmapStream, array);
                             _imagesCache[key].Add(file, array);
                         }
                     }
@@ -197,7 +183,7 @@ namespace PackViewer
 
         private void AddFolders(string dir, string imageFolder, int count, ref int curCount)
         {
-            if (dir.Equals(imageFolder))
+            if (dir.Equals(imageFolder) || dir.Contains("_Saved"))
                 return;
 
             var files = FileOps.GetFiles(dir);
@@ -233,7 +219,7 @@ namespace PackViewer
             {
                 _vm.Status = "Building folder list";
                 // Check if input is folder or file
-                // In case of startFile is a file, using directory where file is belonging as a starting folder
+                // In case _startFile is a file - use the directory where file is belonging as a starting folder
                 var imageFolder = Directory.Exists(_startFile)? _startFile : Path.GetDirectoryName(_startFile);
                 _rootFolder = Path.GetFullPath(Path.Combine(imageFolder, @"..\"));
                 int cnt = 0;

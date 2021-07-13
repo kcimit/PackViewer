@@ -11,6 +11,20 @@ namespace PackViewer
 {
     public static class FileOps
     {
+        public static void ReadWholeArray(Stream stream, byte[] data)
+        {
+            int offset = 0;
+            int remaining = data.Length;
+            while (remaining > 0)
+            {
+                int read = stream.Read(data, offset, remaining);
+                if (read <= 0)
+                    throw new EndOfStreamException
+                        ($"End of stream reached with {remaining} bytes left to read");
+                remaining -= read;
+                offset += read;
+            }
+        }
         public static List<string> GetFiles(string currentFolder)
         {
             string[] extensions = new[] { ".jpg", ".jpeg", ".cr2", ".cr3", ".arw" };

@@ -15,12 +15,30 @@ namespace PackViewer
     {
         private void Application_Startup(object sender, StartupEventArgs e)
         {
+            var input = string.Empty;
             if (e.Args.Length == 0)
             {
-                MessageBox.Show("No image file specified");
-                Environment.Exit(0);
+                using (var dialog = new System.Windows.Forms.FolderBrowserDialog
+                {
+                    Description = "Select starting image folder",
+                    ShowNewFolderButton=false
+                })
+                {
+                    var result = dialog.ShowDialog();
+                    if (result == System.Windows.Forms.DialogResult.OK)
+                    {
+                        input = dialog.SelectedPath;
+                    }
+                    else
+                    {
+                        MessageBox.Show("No image file specified");
+                        Environment.Exit(0);
+                    }
+                }
             }
-            MainWindow wnd = new MainWindow(e.Args[0]);
+            else
+                input = e.Args[0];
+            MainWindow wnd = new MainWindow(input);
             wnd.Show();
         }
     }
