@@ -1,9 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Data;
-using System.Linq;
-using System.Threading.Tasks;
 using System.Windows;
 
 namespace PackViewer
@@ -20,7 +15,7 @@ namespace PackViewer
             {
                 using (var dialog = new System.Windows.Forms.FolderBrowserDialog
                 {
-                    Description = "Select starting image folder",
+                    Description = "Select starting folder with images",
                     ShowNewFolderButton=false
                 })
                 {
@@ -38,7 +33,8 @@ namespace PackViewer
             }
             else
                 input = e.Args[0];
-            MainWindow wnd = new MainWindow(input);
+
+            var wnd = new MainWindow(input);
             wnd.Show();
         }
     }
