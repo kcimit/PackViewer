@@ -1,5 +1,7 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -9,9 +11,18 @@ using System.Windows.Threading;
 
 namespace PackViewer
 {
+    public enum ReadyStatus { WaitingForFolderList, FirstFolderReceived, Failed};
+    public class CachedFiles
+    {
+        public Dictionary<string, List<string>> Files;
+        public CachedFiles()
+        { Files = new Dictionary<string, List<string>>(); }
+    }
     public class PackView
     {
         Dictionary<string, Dictionary<string, byte[]>> _imagesCache;
+        CachedFiles _cache;
+        private long _totalMemory, _cacheSize;
         Queue<Action> _imageLoadingQueue;
         public int StartImageIndex => _startImageIndex;
         public string GetCurrentFolderName => _currentFolder;
@@ -27,18 +38,21 @@ namespace PackViewer
         List<string> _folders;
 
         Dictionary<string, List<string>> _files;
+
         List<string> _foldersToDelete { get; set; }
         List<string> _foldersToSave { get; set; }
         public List<string> FoldersTrashed => _foldersToDelete;
+        public bool StartFolderIs_Saved { get; private set; }
         public List<string> FoldersSaved => _foldersToSave;
         public bool FolderInThrash { get => _foldersToDelete.Contains(_currentFolder); }
         public bool FolderIsSaved { get => _foldersToSave.Contains(_currentFolder); }
-        public bool CanStartView { get; private set; }
+        public ReadyStatus CanStartView { get; private set; }
 
         Task _queueTask;
         string _startFile;
         ViewModel _vm;
         private int _queueCount;
+
         public List<string> GetCurrentFolderImages
         {
             get
@@ -50,14 +64,13 @@ namespace PackViewer
                 return _files[_currentFolder]; 
             }
         }
-
         public void FolderUp()
         {
             if (_indexOfCurrentFolder == 0) return;
             if (_indexOfCurrentFolder + 1 < _folders.Count)
             {
                 if (_imagesCache.ContainsKey(_folders[_indexOfCurrentFolder+1]))
-                    _imagesCache.Remove(_folders[_indexOfCurrentFolder+1]);
+                    RemoveCache(_folders[_indexOfCurrentFolder+1]);
             }
             _indexOfCurrentFolder--;
             _currentFolder = _folders[_indexOfCurrentFolder];
@@ -70,10 +83,16 @@ namespace PackViewer
             if (_indexOfCurrentFolder + 1 >= _folders.Count)
                 return;
             if (_imagesCache.ContainsKey(_currentFolder))
-                _imagesCache.Remove(_currentFolder);
+                RemoveCache(_currentFolder);
 
             _indexOfCurrentFolder++;
             _currentFolder = _folders[_indexOfCurrentFolder];
+        }
+        private void RemoveCache(string folder)
+        {
+            foreach (var v in _imagesCache[folder].Values)
+                _cacheSize -= v.Length;
+            _imagesCache.Remove(folder);
         }
         private void EnqueuLoadingFiles(string currentFolder, string nextImageFolder)
         {
@@ -98,7 +117,7 @@ namespace PackViewer
                 }
             }
         }
-        
+
         internal void ThrashIt()
         {
             if (_foldersToDelete.Contains(_currentFolder))
@@ -131,6 +150,7 @@ namespace PackViewer
         {
             lock (_imageLoadingQueue)
             {
+                if (_cacheSize > _totalMemory) return;
                 if (!_imagesCache.ContainsKey(key)) return;
                 _imageLoadingQueue.Enqueue(() =>
                 {
@@ -142,29 +162,36 @@ namespace PackViewer
                             byte[] array = new byte[new FileInfo(file).Length];
                             FileOps.ReadWholeArray(BitmapStream, array);
                             _imagesCache[key].Add(file, array);
+                            _cacheSize+=array.Length;
                         }
                     }
                     catch { }
                 });
             }
         }
-        public PackView(string file, ViewModel vm)
+        public PackView(string file, ViewModel vm, System.Threading.CancellationToken token)
         {
+            using (Process proc = Process.GetCurrentProcess())
+            {
+                _totalMemory = proc.PrivateMemorySize64 / 2;
+            }
+            _cacheSize = 0;
             _foldersToDelete = new List<string>();
             _foldersToSave = new List<string>();
             _startFile = file;
             _imagesCache = new Dictionary<string, Dictionary<string, byte[]>>();
             _imageLoadingQueue = new Queue<Action>();
             _vm = vm;
+            _cache = new CachedFiles();
             _queueCount = 0;
-            StartQueueTask();
-            CanStartView=BuildFolderList();
+            CanStartView = ReadyStatus.WaitingForFolderList;
+            StartQueueTask(token);
         }
-        private void StartQueueTask()
+        private void StartQueueTask(System.Threading.CancellationToken token)
         {
             _queueTask = Task.Factory.StartNew(() =>
               {
-                  while (true)
+                  while (true && !token.IsCancellationRequested)
                   {
                       if (_queueCount!=Enqueued)
                       {
@@ -181,26 +208,45 @@ namespace PackViewer
               });
         }
 
-        private void AddFolders(string dir, string imageFolder, int count, ref int curCount)
+        private void AddFolders(System.Threading.CancellationToken token, string dir, string imageFolder, ref int curCount)
         {
-            if (dir.Equals(imageFolder) || dir.Contains("_Saved"))
+            if (dir.Equals(imageFolder))
                 return;
 
-            var files = FileOps.GetFiles(dir);
-            if (files.Any())
-            {
-                _folders.Add(dir);
-                files.Sort();
-                _files.Add(dir, files);
-            }
-            var subFolders = CustomSearcher.GetDirectories(dir, "*", SearchOption.TopDirectoryOnly);
-            foreach (var subFolder in subFolders)
-                AddFolders(subFolder, imageFolder, count, ref curCount);
+            if (!StartFolderIs_Saved && dir.Contains("_Saved"))
+                return;
 
-            _vm.Status = $"[{++curCount}/{count}]";
+            if (_cache.Files.Any() && _cache.Files.TryGetValue(dir, out List<string> f))
+                AddFolderAndFiles(dir, f);
+            else
+            {
+                var files = FileOps.GetFiles(dir);
+                if (files.Any())
+                {
+                    files.Sort();
+                    AddFolderAndFiles(dir, files);
+                }
+            }
+            if (token.IsCancellationRequested)
+                return;
+
+            var subFolders = CustomSearcher.GetDirectories(dir, "*", SearchOption.TopDirectoryOnly).OrderBy(r=>r).ToList();
+            foreach (var subFolder in subFolders)
+            {
+                if (token.IsCancellationRequested)
+                    break;
+                AddFolders(token, subFolder, imageFolder, ref curCount);
+            }
+            ++curCount;
         }
 
-        private bool BuildFolderList()
+        private void AddFolderAndFiles(string dir, List<string> f)
+        {
+            _folders.Add(dir);
+            _files.Add(dir, f);
+        }
+
+        public void BuildFolderList(System.Threading.CancellationToken token)
         {
             _currentFolder = string.Empty;
             _indexOfCurrentFolder = -1;
@@ -212,49 +258,83 @@ namespace PackViewer
             if (!File.Exists(_startFile) && !Directory.Exists(_startFile))
             {
                 MessageBox.Show("Please open application by passing to it any image file in the folder", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                return false;
+                CanStartView = ReadyStatus.Failed;
             }
-            
+
             try
             {
                 _vm.Status = "Building folder list";
+
                 // Check if input is folder or file
                 // In case _startFile is a file - use the directory where file is belonging as a starting folder
-                var imageFolder = Directory.Exists(_startFile)? _startFile : Path.GetDirectoryName(_startFile);
+                // Read first main folder
+
+                var imageFolder = Directory.Exists(_startFile) ? _startFile : Path.GetDirectoryName(_startFile);
                 _rootFolder = Path.GetFullPath(Path.Combine(imageFolder, @"..\"));
+                StartFolderIs_Saved=_rootFolder.Contains("_Saved");
+                var dirs = CustomSearcher.GetDirectories(_rootFolder, "*", SearchOption.TopDirectoryOnly).OrderBy(r=>r).ToList();
+                if (token.IsCancellationRequested)
+                    return;
+
+                ReadCacheFile();
                 int cnt = 0;
-                AddFolders(imageFolder, "", 0, ref cnt);
+                AddFolders(token, imageFolder, "", ref cnt);
                 if (!_folders.Any())
                 {
                     MessageBox.Show($"No subdirectories are found in {_rootFolder}", "Problem", MessageBoxButton.OK, MessageBoxImage.Exclamation);
-                    return false;
+                    CanStartView = ReadyStatus.Failed;
+                    return;
+                }
+                else
+                {
+                    _indexOfCurrentFolder = 0;
+                    _currentFolder = _folders[0];
+                    _startImageIndex = 0;
+                    CanStartView = ReadyStatus.FirstFolderReceived;
                 }
 
-                // Read first main folder
-                _indexOfCurrentFolder = 0;
-                _currentFolder = _folders[0];
-                _startImageIndex = 0;
-
-                var dirs = CustomSearcher.GetDirectories(_rootFolder, "*", SearchOption.TopDirectoryOnly);
-
-                // Then create a task to build the rest in the background
-                var task = Task.Factory.StartNew(() =>
+                foreach (var dir in dirs)
                 {
-                    foreach (var dir in dirs)
-                    {
-                        AddFolders(dir, imageFolder, dirs.Count, ref cnt);
-                    }
-                    _currentFolder = _folders[_indexOfCurrentFolder];
-                    _allFoldersAreRead = true;
-                });
+                    if (token.IsCancellationRequested)
+                        break;
+
+                    AddFolders(token, dir, imageFolder, ref cnt);
+                    _vm.Status = $"[{cnt}/{dirs.Count}]";
+                    _folders.Sort();
+                    _indexOfCurrentFolder = _folders.IndexOf(_currentFolder);
+                }
+                _allFoldersAreRead = true;
             }
 
             catch (Exception e)
             {
                 MessageBox.Show(e.Message);
-                return false;
+                CanStartView = ReadyStatus.Failed;
             }
-            return true;
+        }
+
+        private void ReadCacheFile()
+        {
+            var fileCache = Path.Combine(_rootFolder, "cacheFolder.json");
+            if (File.Exists(fileCache))
+            {
+                var r = File.ReadAllText(fileCache);
+                _cache = JsonConvert.DeserializeObject<CachedFiles>(r);
+            }
+            if (_cache == null)
+                _cache = new CachedFiles();
+        }
+
+        private void WriteCacheFile()
+        {
+            var c = new CachedFiles { Files = _files };
+
+            var fileCache = Path.Combine(_rootFolder, "cacheFolder.json");
+            using (var r = new StreamWriter(fileCache, false))
+            {
+                var json = JsonConvert.SerializeObject(c);
+                r.Write(json);
+            }
         }
         public void Finalize(bool delete, bool save, bool deleteOriginal)
         {
@@ -265,6 +345,8 @@ namespace PackViewer
 
             if (save)
                 FileOps.ProceedWithSaving(_vm, _rootFolder, _foldersToSave, deleteOriginal);
+
+            WriteCacheFile();
         }
     }
 }

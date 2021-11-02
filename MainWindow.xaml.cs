@@ -1,16 +1,10 @@
-﻿using Services;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Drawing;
-using System.Drawing.Imaging;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
-using System.Windows.Media.Imaging;
 using System.Windows.Threading;
-using TurboJpegWrapper;
 
 namespace PackViewer
 {
@@ -21,10 +15,17 @@ namespace PackViewer
     {
         ViewModel vm;
         PackView PackView;
+
+        readonly int FastForwardValue = 10;
+        readonly bool enableLibRaw = false;
         List<string> filesInFolder;
         int currentIndex;
-        bool enableLibRaw = false;
         string _file;
+        private CancellationTokenSource tokenSource;
+        private CancellationToken token;
+
+        public Task foldersAsync { get; private set; }
+
         public MainWindow(string file)
         {
             InitializeComponent();
@@ -33,8 +34,9 @@ namespace PackViewer
             _file = file;
             enableLibRaw = PackView.IsRaw(file);
             DataContext = vm;
+            tokenSource = new CancellationTokenSource();
+            token = tokenSource.Token;
         }
-
         private void ShowImage()
         {
             try
@@ -43,7 +45,7 @@ namespace PackViewer
                     return;
 
                 var file = filesInFolder[currentIndex];
-                vm.Status = $"[{PackView.CurrentFolderIndex + 1}/{PackView.FoldersCount}] {file}";
+                ShowStatus();
                 var numRetries = 15;
                 byte[] BitmapStream = null;
                 while (numRetries > 0)
@@ -63,18 +65,20 @@ namespace PackViewer
                     throw new Exception($"Cannot acces file {file}");
 
                 if (PackView.IsRaw(file) && enableLibRaw)
-                {
-                    ImageProcess.GetRawFromBuffer(BitmapStream, BitmapStream.Length, DImage);
-                }
+                    ImageProcess.DecompressRaw(BitmapStream, DImage);
                 else
-                {
                     ImageProcess.DecompressJpeg(BitmapStream, DImage);
-                }
+
                 BitmapStream = null;
             }
             catch (Exception e) {
                 MessageBox.Show(e.Message);
             }
+        }
+
+        private void ShowStatus()
+        {
+            vm.Status = $"[{PackView.CurrentFolderIndex + 1}/{PackView.FoldersCount}] {filesInFolder[currentIndex]}";
         }
 
         private void Window_KeyDown(object sender, KeyEventArgs e)
@@ -100,19 +104,22 @@ namespace PackViewer
                 SaveIt();
             e.Handled = true;
         }
-
         private void FirstImage()
         {
-            currentIndex = 0;
-            ShowImage();
+            if (PackView != null)
+            {
+                currentIndex = 0;
+                ShowImage();
+            }
         }
-
         private void LastImage()
         {
-            currentIndex = filesInFolder.Count - 1;
-            ShowImage();
+            if (PackView != null)
+            {
+                currentIndex = filesInFolder.Count - 1;
+                ShowImage();
+            }
         }
-
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             var source = DImage.Source;
@@ -153,9 +160,10 @@ namespace PackViewer
                 DImage.Source = source;
                 return;
             }
-
-            this.WindowState = WindowState.Minimized;
-
+            tokenSource.Cancel();
+            while (foldersAsync.Status == TaskStatus.Running)
+                Task.Delay(200);
+            WindowState = WindowState.Minimized;
             PackView.Finalize(delete, save, deleteOriginal);
             ImageProcess.Close();
         }
@@ -163,39 +171,45 @@ namespace PackViewer
         {
             Close();
         }
-
         private void ThrashButton_Click(object sender, RoutedEventArgs e)
         {
             ThrashIt();
         }
-
         private void Save_Click(object sender, RoutedEventArgs e)
         {
             SaveIt();
         }
-
         private void SaveIt()
         {
-            PackView.SaveIt();
-            vm.IsSaved = PackView.FolderIsSaved;
+            if (PackView != null)
+            {
+                PackView.SaveIt();
+                vm.IsSaved = PackView.FolderIsSaved;
+            }
         }
-
         private void ThrashIt()
         {
-            PackView.ThrashIt();
-            vm.IsInThrash = PackView.FolderInThrash;
+            if (PackView != null)
+            {
+                PackView.ThrashIt();
+                vm.IsInThrash = PackView.FolderInThrash;
+            }
         }
-
         private void FastForwardButton_Click(object sender, RoutedEventArgs e)
         {
-            currentIndex = Math.Min(currentIndex + 10, filesInFolder.Count - 1);
-            ShowImage();
+            if (PackView != null && filesInFolder!=null)
+            {
+                currentIndex = Math.Min(currentIndex + FastForwardValue, filesInFolder.Count - 1);
+                ShowImage();
+            }
         }
-
         private void ToTheEndButton_Click(object sender, RoutedEventArgs e)
         {
-            currentIndex = filesInFolder.Count - 1;
-            ShowImage();
+            if (PackView != null && filesInFolder != null)
+            {
+                currentIndex = filesInFolder.Count - 1;
+                ShowImage();
+            }
         }
         private void FolderUpButton_Click(object sender, RoutedEventArgs e)
         {
@@ -203,48 +217,51 @@ namespace PackViewer
         }
         private void FolderUp()
         {
-            PackView.FolderUp();
-            GetFolderImages();
+            if (PackView != null)
+            {
+                PackView.FolderUp();
+                GetFolderImages();
+            }
         }
         private void FolderDownButton_Click(object sender, RoutedEventArgs e)
         {
             FolderDown();
         }
-
         private void FolderDown()
         {
-            PackView.FolderDown();
-            GetFolderImages();
+            if (PackView != null)
+            {
+                PackView.FolderDown();
+                GetFolderImages();
+            }
         }
-
         private void GetFolders()
         {
-            Task foldersAsync = Task.Factory.StartNew(() =>
+            foldersAsync = Task.Factory.StartNew(() =>
             {
                 try
                 {
-                    PackView = new PackView(_file, vm);
+                    PackView = new PackView(_file, vm, token);
+                    PackView.BuildFolderList(token);
+                    ShowStatus();
                 }
                 catch (Exception e)
                 {
                     MessageBox.Show(e.Message);
                 }
-            });
+            }, token);
 
-            foldersAsync.ContinueWith(FoldersReceived);
-        }
-
-        private void FoldersReceived(Task obj)
-        {
             Dispatcher.Invoke(() =>
             {
-                if (!PackView.CanStartView)
+                while (PackView==null || PackView.CanStartView == ReadyStatus.WaitingForFolderList)
+                    Task.Delay(200);
+
+                if (PackView.CanStartView == ReadyStatus.Failed)
                     Environment.Exit(0);
 
                 GetFolderImages();
             });
         }
-
         private void GetFolderImages()
         {
             DImage.Source = null;
@@ -262,7 +279,6 @@ namespace PackViewer
 
             imagesAsync.ContinueWith(FolderImagesReceived);
         }
-
         private void FolderImagesReceived(Task obj)
         {
             Dispatcher.Invoke(() =>
@@ -273,35 +289,36 @@ namespace PackViewer
                 ShowImage();
             });
         }
-
         private void PrevImageButton_Click(object sender, RoutedEventArgs e)
         {
             PrevImage();
         }
-
         private void PrevImage()
         {
-            if (currentIndex > 0)
+            if (PackView != null && filesInFolder != null)
             {
-                currentIndex--;
-                ShowImage();
+                if (currentIndex > 0)
+                {
+                    currentIndex--;
+                    ShowImage();
+                }
             }
         }
-
         private void NextImageButton_Click(object sender, RoutedEventArgs e)
         {
             NextImage();
         }
-
         private void NextImage()
         {
-            if (currentIndex < filesInFolder.Count - 1)
+            if (PackView != null && filesInFolder != null)
             {
-                currentIndex++;
-                ShowImage();
+                if (currentIndex < filesInFolder.Count - 1)
+                {
+                    currentIndex++;
+                    ShowImage();
+                }
             }
         }
-
         private void Window_MouseWheel(object sender, MouseWheelEventArgs e)
         {
             if (e.Delta > 0)
@@ -310,7 +327,6 @@ namespace PackViewer
             else if (e.Delta < 0)
                 NextImage();
         }
-
         private void Window_ContentRendered(object sender, EventArgs e)
         {
             try

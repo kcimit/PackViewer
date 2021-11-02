@@ -14,6 +14,7 @@ namespace PackViewer
         static IntPtr librawHandler;
         static TJDecompressor _decompressor;
 
+        [Obsolete]
         public static void GetRaw(string file, System.Windows.Controls.Image dImage)
         {
             // open RAW file and get basic info
@@ -121,14 +122,14 @@ namespace PackViewer
 
             // convert pointer to structure to get image info and raw data
             var img = Marshal.PtrToStructure<libraw_processed_image_t>(ptr);
-            /*
+            
             Console.WriteLine("\nImage type:   " + img.type);
             Console.WriteLine("Image height: " + img.height);
             Console.WriteLine("Image width:  " + img.width);
             Console.WriteLine("Image colors: " + img.colors);
             Console.WriteLine("Image bits:   " + img.bits);
             Console.WriteLine("Data size:    " + img.data_size);
-            Console.WriteLine("Checksum:     " + img.height * img.width * img.colors * (img.bits / 8));*/
+            Console.WriteLine("Checksum:     " + img.height * img.width * img.colors * (img.bits / 8));
 
             // rqeuired step before accessing the "data" array
             Array.Resize(ref img.data, (int)img.data_size);
@@ -186,8 +187,9 @@ namespace PackViewer
             libraw_close(librawHandler);
         }
 
-        public static void GetRawFromBuffer(byte[] arr, long size, System.Windows.Controls.Image dImage)
+        public static void DecompressRaw(byte[] arr, System.Windows.Controls.Image dImage)
         {
+            var size = arr.Length;
             // open RAW file and get basic info
             var r = libraw_open_buffer(librawHandler, arr, size);
             if (r != LibRaw_errors.LIBRAW_SUCCESS)
