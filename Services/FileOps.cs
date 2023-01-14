@@ -95,14 +95,14 @@ namespace PackViewer
                         skipped++;
                     else
                     {
-                        Application.Current.Dispatcher.Invoke(DispatcherPriority.Background, new Action(() => { vm.Status = $"Deleting {folder}"; }));
-                        Directory.Delete(folder, true);
+                        Application.Current.Dispatcher.Invoke(DispatcherPriority.Background, new Action(() => { vm.StatusBottom = $"Deleting {folder}"; }));
+                        DeleteFolder(folder);
                     }
 
                     var folderUp = Path.GetFullPath(Path.Combine(folder, @"..\"));
                     if (System.IO.Directory.GetDirectories(folderUp).Length == 0)
                     {
-                        Directory.Delete(folderUp, true);
+                        DeleteFolder(folderUp);
                     }
                 }
                 catch (Exception e)
@@ -112,6 +112,39 @@ namespace PackViewer
             }
             if (skipped > 0)
                 MessageBox.Show($"{skipped} directories were not removed since they contain subdirectories.");
+        }
+
+        private static void DeleteFolder(string folder)
+        {
+            try
+            {
+                Directory.Delete(folder, true);
+            }
+            catch { }
+        }
+
+        internal static void ProceedWithCopyingFav(ViewModel vm, List<string> favImages)
+        {
+            foreach (var file in favImages)
+            {
+                try
+                {
+                    var folder = Path.GetDirectoryName(file);
+                    if (folder == null) continue;
+                    folder = Path.Combine(folder, "_FavPackViewer");
+                    if (!Directory.Exists(folder))
+                        Directory.CreateDirectory(folder);
+
+                    var newFile = Path.Combine(folder, Path.GetFileName(file));
+                    Application.Current.Dispatcher.Invoke(DispatcherPriority.Background, new Action(() => { vm.StatusBottom = $"Copying {file}"; }));
+                    File.Copy(file, newFile);
+
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.Message);
+                }
+            }
         }
     }
 }

@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 
 namespace PackViewer
@@ -13,8 +14,7 @@ namespace PackViewer
     /// </summary>
     public partial class MainWindow : Window
     {
-        ViewModel vm;
-        PackView PackView;
+        ViewModel PackView;
 
         readonly int FastForwardValue = 10;
         readonly bool enableLibRaw = false;
@@ -29,11 +29,11 @@ namespace PackViewer
         public MainWindow(string file)
         {
             InitializeComponent();
-                        
-            vm = new ViewModel();
+
+            PackView = new ViewModel();
             _file = file;
-            enableLibRaw = PackView.IsRaw(file);
-            DataContext = vm;
+            enableLibRaw = ViewModel.IsRaw(file);
+            DataContext = PackView;
             tokenSource = new CancellationTokenSource();
             token = tokenSource.Token;
         }
@@ -48,11 +48,13 @@ namespace PackViewer
                 ShowStatus();
                 var numRetries = 15;
                 byte[] BitmapStream = null;
+                Rotation rot = Rotation.Rotate0;
+
                 while (numRetries > 0)
                 {
                     try
                     {
-                        BitmapStream = PackView.GetImage(file);
+                        BitmapStream = PackView.GetImage(file, out rot);
                         break;
                     }
                     catch
@@ -64,12 +66,13 @@ namespace PackViewer
                 if (BitmapStream == null)
                     throw new Exception($"Cannot acces file {file}");
 
-                if (PackView.IsRaw(file) && enableLibRaw)
+                if (ViewModel.IsRaw(file) && enableLibRaw)
                     ImageProcess.DecompressRaw(BitmapStream, DImage);
                 else
-                    ImageProcess.DecompressJpeg(BitmapStream, DImage);
+                    ImageProcess.DecompressJpeg(BitmapStream, DImage, rot);
 
                 BitmapStream = null;
+                PackView.IsFav = PackView.GetFavStatus(file);
             }
             catch (Exception e) {
                 MessageBox.Show(e.Message);
@@ -78,7 +81,8 @@ namespace PackViewer
 
         private void ShowStatus()
         {
-            vm.Status = $"[{PackView.CurrentFolderIndex + 1}/{PackView.FoldersCount}] {filesInFolder[currentIndex]}";
+            if (filesInFolder != null)
+                PackView.StatusBottom = $"({currentIndex+1}/{filesInFolder.Count}) [{PackView.CurrentFolderIndex + 1}/{PackView.FoldersCount}] {filesInFolder[currentIndex]}";
         }
 
         private void Window_KeyDown(object sender, KeyEventArgs e)
@@ -102,6 +106,9 @@ namespace PackViewer
                 ThrashIt();
             if ((Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift)) && e.Key == Key.Insert)
                 SaveIt();
+            if ((Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl)) && e.Key == Key.S)
+                AddToFav();
+
             e.Handled = true;
         }
         private void FirstImage()
@@ -129,6 +136,7 @@ namespace PackViewer
             var cancel = false;
             var save = false;
 
+            
             var cntDel = PackView.FoldersTrashed.Count;
             if (cntDel != 0)
             {
@@ -154,6 +162,7 @@ namespace PackViewer
                 }
             }
 
+            
             if (cancel)
             {
                 e.Cancel = true;
@@ -175,24 +184,41 @@ namespace PackViewer
         {
             ThrashIt();
         }
+
+        
         private void Save_Click(object sender, RoutedEventArgs e)
         {
             SaveIt();
+        }
+
+        private void Fav_Click(object sender, RoutedEventArgs e)
+        {
+            AddToFav();
         }
         private void SaveIt()
         {
             if (PackView != null)
             {
                 PackView.SaveIt();
-                vm.IsSaved = PackView.FolderIsSaved;
+                PackView.IsSaved = PackView.FolderIsSaved;
             }
         }
+
+        private void AddToFav()
+        {
+            if (PackView != null)
+            {
+                PackView.AddToFav(filesInFolder[currentIndex]);
+                PackView.IsFav = PackView.GetFavStatus(filesInFolder[currentIndex]);
+            }
+        }
+
         private void ThrashIt()
         {
             if (PackView != null)
             {
                 PackView.ThrashIt();
-                vm.IsInThrash = PackView.FolderInThrash;
+                PackView.IsInThrash = PackView.FolderInThrash;
             }
         }
         private void FastForwardButton_Click(object sender, RoutedEventArgs e)
@@ -241,7 +267,7 @@ namespace PackViewer
             {
                 try
                 {
-                    PackView = new PackView(_file, vm, token);
+                    PackView.Init(_file, token);
                     PackView.BuildFolderList(token);
                     ShowStatus();
                 }
@@ -284,8 +310,8 @@ namespace PackViewer
             Dispatcher.Invoke(() =>
             {
                 currentIndex = 0;
-                vm.IsInThrash = PackView.FolderInThrash;
-                vm.IsSaved = PackView.FolderIsSaved;
+                PackView.IsInThrash = PackView.FolderInThrash;
+                PackView.IsSaved = PackView.FolderIsSaved;
                 ShowImage();
             });
         }

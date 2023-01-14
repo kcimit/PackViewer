@@ -1,4 +1,6 @@
-﻿using Newtonsoft.Json;
+﻿using ExifLib;
+using Newtonsoft.Json;
+using Services;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -7,6 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 
 namespace PackViewer
@@ -18,9 +21,10 @@ namespace PackViewer
         public CachedFiles()
         { Files = new Dictionary<string, List<string>>(); }
     }
-    public class PackView
+    public partial class ViewModel : ViewModelBase
     {
         Dictionary<string, Dictionary<string, byte[]>> _imagesCache;
+        Dictionary<string, Dictionary<string, Rotation>> _rotCache;
         CachedFiles _cache;
         private long _totalMemory, _cacheSize;
         Queue<Action> _imageLoadingQueue;
@@ -36,6 +40,7 @@ namespace PackViewer
         int _startImageIndex;
         private bool _allFoldersAreRead;
         List<string> _folders;
+        List<string> _favImages;
 
         Dictionary<string, List<string>> _files;
 
@@ -50,9 +55,8 @@ namespace PackViewer
 
         Task _queueTask;
         string _startFile;
-        ViewModel _vm;
         private int _queueCount;
-
+        public static bool IsRaw(string file) => file.ToLower().EndsWith("cr2") || file.ToLower().EndsWith("cr3") || file.ToLower().EndsWith("arw");
         public List<string> GetCurrentFolderImages
         {
             get
@@ -64,34 +68,11 @@ namespace PackViewer
                 return _files[_currentFolder]; 
             }
         }
-        public void FolderUp()
-        {
-            if (_indexOfCurrentFolder == 0) return;
-            if (_indexOfCurrentFolder + 1 < _folders.Count)
-            {
-                if (_imagesCache.ContainsKey(_folders[_indexOfCurrentFolder+1]))
-                    RemoveCache(_folders[_indexOfCurrentFolder+1]);
-            }
-            _indexOfCurrentFolder--;
-            _currentFolder = _folders[_indexOfCurrentFolder];
-        }
 
-        internal static bool IsRaw(string file) => file.ToLower().EndsWith("cr2") || file.ToLower().EndsWith("cr3") || file.ToLower().EndsWith("arw");
-
-        public void FolderDown()
-        {
-            if (_indexOfCurrentFolder + 1 >= _folders.Count)
-                return;
-            if (_imagesCache.ContainsKey(_currentFolder))
-                RemoveCache(_currentFolder);
-
-            _indexOfCurrentFolder++;
-            _currentFolder = _folders[_indexOfCurrentFolder];
-        }
+        
         private void RemoveCache(string folder)
         {
-            foreach (var v in _imagesCache[folder].Values)
-                _cacheSize -= v.Length;
+            _cacheSize -= _imagesCache[folder].Values.Sum(r => r.Length);
             _imagesCache.Remove(folder);
         }
         private void EnqueuLoadingFiles(string currentFolder, string nextImageFolder)
@@ -103,6 +84,8 @@ namespace PackViewer
             if (!_imagesCache.ContainsKey(currentFolder))
             {
                 _imagesCache.Add(currentFolder, new Dictionary<string, byte[]>());
+                if (!_rotCache.ContainsKey(currentFolder))
+                    _rotCache.Add(currentFolder, new Dictionary<string, Rotation>());
                 foreach (var file in _files[currentFolder])
                 {
                     AddImage(file, currentFolder);
@@ -111,11 +94,41 @@ namespace PackViewer
             if (!string.IsNullOrEmpty(nextImageFolder) && !_imagesCache.ContainsKey(nextImageFolder))
             {
                 _imagesCache.Add(nextImageFolder, new Dictionary<string, byte[]>());
+                if (!_rotCache.ContainsKey(nextImageFolder))
+                    _rotCache.Add(nextImageFolder, new Dictionary<string, Rotation>());
+
                 foreach (var file in _files[nextImageFolder])
                 {
                     AddImage(file, nextImageFolder);
                 }
             }
+        }
+
+        internal bool GetFavStatus(string file) => _favImages != null && _favImages.Contains(file);
+
+        public void FolderUp()
+        {
+            if (_indexOfCurrentFolder == 0) return;
+            if (_indexOfCurrentFolder + 1 < _folders.Count && _imagesCache.ContainsKey(_folders[_indexOfCurrentFolder + 1]))
+                RemoveCache(_folders[_indexOfCurrentFolder + 1]);
+
+            _indexOfCurrentFolder--;
+            _currentFolder = _folders[_indexOfCurrentFolder];
+            if (!FolderIsSaved && !FolderInThrash && AutoTrashFolder)
+                _foldersToDelete.Add(_currentFolder);
+        }
+
+        public void FolderDown()
+        {
+            if (_indexOfCurrentFolder + 1 >= _folders.Count)
+                return;
+            if (_imagesCache.ContainsKey(_currentFolder))
+                RemoveCache(_currentFolder);
+
+            _indexOfCurrentFolder++;
+            _currentFolder = _folders[_indexOfCurrentFolder];
+            if (!FolderIsSaved && !FolderInThrash && AutoTrashFolder)
+                _foldersToDelete.Add(_currentFolder);
         }
 
         internal void ThrashIt()
@@ -132,20 +145,67 @@ namespace PackViewer
             else
                 _foldersToSave.Add(_currentFolder);
         }
-        internal byte[] GetImage(string file)
+
+        internal void AddToFav(string v)
+        {
+            if (_favImages.Contains(v))
+                _favImages.Remove(v);
+            else
+                _favImages.Add(v);
+        }
+
+        internal byte[] GetImage(string file, out Rotation rot)
         {
             if (_imagesCache.ContainsKey(_currentFolder) && _imagesCache[_currentFolder].ContainsKey(file))
+            {
+                rot = _rotCache[_currentFolder][file];
                 return _imagesCache[_currentFolder][file];
+            }
             else
             {
                 using (Stream BitmapStream = System.IO.File.Open(file, System.IO.FileMode.Open))
                 {
                     byte[] array = new byte[new FileInfo(file).Length];
                     FileOps.ReadWholeArray(BitmapStream, array);
+
+                    rot = GetOrientation(array);
                     return array;
                 }
             }
         }
+
+        private static Rotation GetOrientation(byte [] array)
+        {
+            Rotation rot = Rotation.Rotate0;
+            try
+            {
+                using (var reader = new ExifReader(array))
+                {
+                    // Get the image thumbnail (if present)
+                    var thumbnailBytes = reader.GetJpegThumbnailBytes();
+                    reader.GetTagValue(ExifTags.Orientation, out ushort orientation);
+
+                    switch (orientation)
+                    {
+                        case 3:
+                        case 4:
+                            rot = Rotation.Rotate180;
+                            break;
+                        case 5:
+                        case 6:
+                            rot = Rotation.Rotate90;
+                            break;
+                        case 7:
+                        case 8:
+                            rot = Rotation.Rotate270;
+                            break;
+                    }
+                }
+            }
+            catch { }
+            return rot;
+        }
+
         public void AddImage(string file, string key)
         {
             lock (_imageLoadingQueue)
@@ -157,19 +217,23 @@ namespace PackViewer
                     try
                     {
                         if (!_imagesCache.ContainsKey(key)) return;
+                        if (_imagesCache[key].ContainsKey(file)) return;
+                        
                         using (Stream BitmapStream = System.IO.File.Open(file, System.IO.FileMode.Open))
                         {
                             byte[] array = new byte[new FileInfo(file).Length];
                             FileOps.ReadWholeArray(BitmapStream, array);
                             _imagesCache[key].Add(file, array);
-                            _cacheSize+=array.Length;
+                            _cacheSize += array.Length;
+                            _rotCache[key].Add(file, GetOrientation(array));
                         }
+                        
                     }
                     catch { }
                 });
             }
         }
-        public PackView(string file, ViewModel vm, System.Threading.CancellationToken token)
+        public void Init(string file, System.Threading.CancellationToken token)
         {
             using (Process proc = Process.GetCurrentProcess())
             {
@@ -178,15 +242,18 @@ namespace PackViewer
             _cacheSize = 0;
             _foldersToDelete = new List<string>();
             _foldersToSave = new List<string>();
+            _favImages = new List<string>();
             _startFile = file;
             _imagesCache = new Dictionary<string, Dictionary<string, byte[]>>();
+            _rotCache = new Dictionary<string, Dictionary<string, Rotation>>();
             _imageLoadingQueue = new Queue<Action>();
-            _vm = vm;
             _cache = new CachedFiles();
             _queueCount = 0;
             CanStartView = ReadyStatus.WaitingForFolderList;
             StartQueueTask(token);
         }
+
+        
         private void StartQueueTask(System.Threading.CancellationToken token)
         {
             _queueTask = Task.Factory.StartNew(() =>
@@ -196,8 +263,7 @@ namespace PackViewer
                       if (_queueCount!=Enqueued)
                       {
                           _queueCount = Enqueued;
-                          if (_vm!=null)
-                            _vm.Status2 = $"{_queueCount}";
+                            StatusTop = $"{_queueCount}";
                       }
                       lock (_imageLoadingQueue)
                       {
@@ -213,7 +279,7 @@ namespace PackViewer
             if (dir.Equals(imageFolder))
                 return;
 
-            if (!StartFolderIs_Saved && dir.Contains("_Saved"))
+            if (!StartFolderIs_Saved && (dir.Contains("_Saved") || dir.Contains("_FavPackViewer")))
                 return;
 
             if (_cache.Files.Any() && _cache.Files.TryGetValue(dir, out List<string> f))
@@ -263,7 +329,7 @@ namespace PackViewer
 
             try
             {
-                _vm.Status = "Building folder list";
+                StatusBottom = "Building folder list";
 
                 // Check if input is folder or file
                 // In case _startFile is a file - use the directory where file is belonging as a starting folder
@@ -299,7 +365,7 @@ namespace PackViewer
                         break;
 
                     AddFolders(token, dir, imageFolder, ref cnt);
-                    _vm.Status = $"[{cnt}/{dirs.Count}]";
+                    StatusBottom = $"[{cnt}/{dirs.Count}]";
                     _folders.Sort();
                     _indexOfCurrentFolder = _folders.IndexOf(_currentFolder);
                 }
@@ -308,43 +374,64 @@ namespace PackViewer
 
             catch (Exception e)
             {
-                MessageBox.Show(e.Message);
+                //MessageBox.Show(e.Message);
                 CanStartView = ReadyStatus.Failed;
             }
         }
 
         private void ReadCacheFile()
         {
-            var fileCache = Path.Combine(_rootFolder, "cacheFolder.json");
-            if (File.Exists(fileCache))
+            try
             {
-                var r = File.ReadAllText(fileCache);
-                _cache = JsonConvert.DeserializeObject<CachedFiles>(r);
+                var fileCache = Path.Combine(_rootFolder, "cacheFolder.json");
+                if (File.Exists(fileCache))
+                {
+                    var r = File.ReadAllText(fileCache);
+                    _cache = JsonConvert.DeserializeObject<CachedFiles>(r);
+                }
             }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.Message);
+            }
+
             if (_cache == null)
                 _cache = new CachedFiles();
         }
 
         private void WriteCacheFile()
         {
-            var c = new CachedFiles { Files = _files };
+            if (!Directory.Exists(_rootFolder))
+                return;
 
-            var fileCache = Path.Combine(_rootFolder, "cacheFolder.json");
-            using (var r = new StreamWriter(fileCache, false))
+            var c = new CachedFiles { Files = _files };
+            try
             {
-                var json = JsonConvert.SerializeObject(c);
-                r.Write(json);
+                var fileCache = Path.Combine(_rootFolder, "cacheFolder.json");
+                using (var r = new StreamWriter(fileCache, false))
+                {
+                    var json = JsonConvert.SerializeObject(c);
+                    r.Write(json);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.Message);
             }
         }
         public void Finalize(bool delete, bool save, bool deleteOriginal)
         {
             _imagesCache = new Dictionary<string, Dictionary<string, byte[]>>();
+            _rotCache = new Dictionary<string, Dictionary<string, Rotation>>();
 
             if (delete)
-                FileOps.ProceedWithDeletion(_foldersToDelete, _vm);
+                FileOps.ProceedWithDeletion(_foldersToDelete, this);
 
             if (save)
-                FileOps.ProceedWithSaving(_vm, _rootFolder, _foldersToSave, deleteOriginal);
+                FileOps.ProceedWithSaving(this, _rootFolder, _foldersToSave, deleteOriginal);
+
+            if (_favImages != null && _favImages.Any())
+                FileOps.ProceedWithCopyingFav(this, _favImages);
 
             WriteCacheFile();
         }

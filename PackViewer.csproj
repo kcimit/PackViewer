@@ -98,6 +98,8 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="ImageProcess\ImageProcess.cs" />
+    <Compile Include="LibJpegTurboNet\ExifReader.cs" />
+    <Compile Include="LibJpegTurboNet\ExifTags.cs" />
     <Compile Include="Services\FileOps.cs" />
     <Compile Include="LibJpegTurboNet\DecompressedImage.cs" />
     <Compile Include="LibJpegTurboNet\Enums.cs" />
@@ -114,7 +116,7 @@
     <Compile Include="LibJpegTurboNet\TJUtils.cs" />
     <Compile Include="LibJpegTurboNet\TurboJpegImport.cs" />
     <Compile Include="LibRawWrapper\LibRawWrapper.cs" />
-    <Compile Include="Services\ViewModel.cs" />
+    <Compile Include="PackView\ViewModel.cs" />
     <Compile Include="Services\ViewModelService.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>

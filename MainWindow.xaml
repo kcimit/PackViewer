@@ -27,7 +27,9 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="60"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="20"/>
             <RowDefinition Height="60"/>
+            <RowDefinition Height="20"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="20"/>
             <RowDefinition Height="Auto"/>
@@ -36,7 +38,7 @@
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="60"/>
-            <ColumnDefinition Width="40"/>
+            <ColumnDefinition Width="60"/>
             <ColumnDefinition Width="60"/>
             <ColumnDefinition Width="1*"/>
             <ColumnDefinition Width="1*"/>
@@ -48,16 +50,16 @@
         <Image 
             x:Name="DImage"
             Grid.Row="0"
-            Grid.RowSpan="8" Grid.ColumnSpan="8"
+            Grid.RowSpan="10" Grid.ColumnSpan="8"
             HorizontalAlignment="Center"
             Margin="0"
             Stretch="Uniform"
             VerticalAlignment="Center"/>
-        <Button HorizontalAlignment="Right" Grid.Row="0" Grid.Column="7" BorderThickness="0" Click="ThrashButton_Click">
+        <Button HorizontalAlignment="Left" Grid.Row="6" Grid.Column="0" BorderThickness="0" Click="ThrashButton_Click">
             <Button.Background>
                 <SolidColorBrush Opacity="0"/>
             </Button.Background>
-            <Path x:Name="Thrash" Width="60" Height="60" Data="M3,2H6V5H3V2M6,7H9V10H6V7M8,2H11V5H8V2M17,11L12,6H15V2H19V6H22L17,11M7.5,22C6.72,22 6.04,21.55 5.71,20.9V20.9L3.1,13.44L3,13A1,1 0 0,1 4,12H20A1,1 0 0,1 21,13L20.96,13.29L18.29,20.9C17.96,21.55 17.28,22 16.5,22H7.5M7.61,20H16.39L18.57,14H5.42L7.61,20Z" Stretch="Uniform">
+            <Path Width="50" Height="50" Data="M9,3V4H4V6H5V19A2,2 0 0,0 7,21H17A2,2 0 0,0 19,19V6H20V4H15V3H9M9,8H11V17H9V8M13,8H15V17H13V8Z" Stretch="Uniform">
                 <Path.Style>
                     <Style TargetType="Path">
                         <Setter Property="Fill" Value="Gray" />
@@ -70,16 +72,50 @@
                 </Path.Style>
             </Path>
         </Button>
-        <Button HorizontalAlignment="Left" Grid.Row="2" Grid.Column="0" BorderThickness="0" Click="Save_Click">
+
+        <ToggleButton HorizontalAlignment="Left" Grid.Row="8" Grid.Column="0" BorderThickness="0" IsChecked="{Binding AutoTrashFolder, Mode=TwoWay}">
+            <ToggleButton.Background>
+                <SolidColorBrush Opacity="0"/>
+            </ToggleButton.Background>
+            <ToggleButton.Style>
+                <Style TargetType="{x:Type ToggleButton}">
+                    <Setter Property="Background" Value="Transparent"/>
+                    <Style.Triggers>
+                        <Trigger Property="IsChecked" Value="true">
+                            <Setter Property="Background" Value="Green"/>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </ToggleButton.Style>
+            <Path Width="50" Height="50" Data="M9,3V4H4V6H5V19A2,2 0 0,0 7,21H17A2,2 0 0,0 19,19V6H20V4H15V3H9M7,6H17V19H7V6M9,8V17H11V8H9M13,8V17H15V8H13Z" Stretch="Uniform" Fill="Gray"/>
+        </ToggleButton>
+            <Button Grid.Row="2" Grid.Column="0" HorizontalAlignment="Left"  BorderThickness="0" Click="Save_Click">
+                <Button.Background>
+                    <SolidColorBrush Opacity="0"/>
+                </Button.Background>
+                <Path x:Name="Save" Width="50" Height="50" Data="M15,9H5V5H15M12,19A3,3 0 0,1 9,16A3,3 0 0,1 12,13A3,3 0 0,1 15,16A3,3 0 0,1 12,19M17,3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V7L17,3Z" Stretch="Uniform">
+                    <Path.Style>
+                        <Style TargetType="Path">
+                            <Setter Property="Fill" Value="Gray" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsSaved}" Value="True">
+                                    <Setter Property="Fill" Value="Red" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Path.Style>
+                </Path>
+            </Button>
+        <Button Grid.Row="4" Grid.Column="0" HorizontalAlignment="Left" BorderThickness="0" Click="Fav_Click">
             <Button.Background>
                 <SolidColorBrush Opacity="0"/>
             </Button.Background>
-            <Path x:Name="Save" Width="60" Height="60" Data="M15,9H5V5H15M12,19A3,3 0 0,1 9,16A3,3 0 0,1 12,13A3,3 0 0,1 15,16A3,3 0 0,1 12,19M17,3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V7L17,3Z" Stretch="Uniform">
+                <Path x:Name="Fav" Width="50" Height="50" Data="M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.42,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.58,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z" Stretch="Uniform">
                 <Path.Style>
                     <Style TargetType="Path">
                         <Setter Property="Fill" Value="Gray" />
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsSaved}" Value="True">
+                            <DataTrigger Binding="{Binding IsFav}" Value="True">
                                 <Setter Property="Fill" Value="Red" />
                             </DataTrigger>
                         </Style.Triggers>
@@ -87,21 +123,22 @@
                 </Path.Style>
             </Path>
         </Button>
+        
 
-        <Button HorizontalAlignment="Left" Grid.Row="4" Grid.Column="0" BorderThickness="0" Click="Exit_Click">
+        <Button HorizontalAlignment="Left" Grid.Row="0" Grid.Column="7" BorderThickness="0" Click="Exit_Click">
             <Button.Background>
                 <SolidColorBrush Opacity="0"/>
             </Button.Background>
             <Path x:Name="Exit" Width="60" Fill="Gray" Height="60" Data="M13.34,8.17C12.41,8.17 11.65,7.4 11.65,6.47A1.69,1.69 0 0,1 13.34,4.78C14.28,4.78 15.04,5.54 15.04,6.47C15.04,7.4 14.28,8.17 13.34,8.17M10.3,19.93L4.37,18.75L4.71,17.05L8.86,17.9L10.21,11.04L8.69,11.64V14.5H7V10.54L11.4,8.67L12.07,8.59C12.67,8.59 13.17,8.93 13.5,9.44L14.36,10.79C15.04,12 16.39,12.82 18,12.82V14.5C16.14,14.5 14.44,13.67 13.34,12.4L12.84,14.94L14.61,16.63V23H12.92V17.9L11.14,16.21L10.3,19.93M21,23H19V3H6V16.11L4,15.69V1H21V23M6,23H4V19.78L6,20.2V23Z"  Stretch="Uniform"/>
         </Button>
 
-        <Button HorizontalAlignment="Right" Grid.Row="4" Grid.Column="7" BorderThickness="0" Click="FolderUpButton_Click">
+        <Button HorizontalAlignment="Right" Grid.Row="6" Grid.Column="7" BorderThickness="0" Click="FolderUpButton_Click">
             <Button.Background>
                 <SolidColorBrush Opacity="0"/>
             </Button.Background>
             <Path Width="60" Height="60" Data="M13,20H11V8L5.5,13.5L4.08,12.08L12,4.16L19.92,12.08L18.5,13.5L13,8V20Z" Fill="Gray" Stretch="Uniform"  />
         </Button>
-        <Button HorizontalAlignment="Right" Grid.Row="6" Grid.Column="7" BorderThickness="0" Click="FolderDownButton_Click">
+        <Button HorizontalAlignment="Right" Grid.Row="8" Grid.Column="7" BorderThickness="0" Click="FolderDownButton_Click">
             <Button.Background>
                 <SolidColorBrush Opacity="0"/>
             </Button.Background>
@@ -119,17 +156,17 @@
             </Button.Background>
             <Path  Width="60" Height="60" Data="M13,6V18L21.5,12M4,18L12.5,12L4,6V18Z" Fill="Gray" Stretch="Uniform"  />
         </Button>
-        <Button  Style="{StaticResource NoHoverButton}" HorizontalAlignment="Stretch" Grid.Row="1" Grid.RowSpan="7" Grid.Column="1" Grid.ColumnSpan="3" BorderThickness="0" Click="PrevImageButton_Click">
+        <Button  Style="{StaticResource NoHoverButton}" HorizontalAlignment="Stretch" Grid.Row="1" Grid.RowSpan="9" Grid.Column="1" Grid.ColumnSpan="3" BorderThickness="0" Click="PrevImageButton_Click">
                 <Button.Background>
                     <SolidColorBrush Opacity="0"/>
                 </Button.Background>
             </Button>
-        <Button Style="{StaticResource NoHoverButton}" HorizontalAlignment="Stretch" Grid.Row="1" Grid.RowSpan="7" Grid.Column="4" Grid.ColumnSpan="1"  BorderThickness="0" Click="NextImageButton_Click">
+        <Button Style="{StaticResource NoHoverButton}" HorizontalAlignment="Stretch" Grid.Row="1" Grid.RowSpan="9" Grid.Column="4" Grid.ColumnSpan="1"  BorderThickness="0" Click="NextImageButton_Click">
                 <Button.Background>
                     <SolidColorBrush Opacity="0"/>
                 </Button.Background>
             </Button>
-        <Label Grid.Row="0" Content="{Binding Status2}" FontSize="14" Foreground="Green"/>
-        <Label Grid.Row="8" Grid.ColumnSpan="8" Content="{Binding Status}" VerticalContentAlignment="Bottom" FontSize="14" Foreground="Green"/>
+        <Label Grid.Row="0" Content="{Binding StatusTop}" FontSize="14" Foreground="Green"/>
+        <Label Grid.Row="10" Grid.ColumnSpan="8" Content="{Binding StatusBottom}" VerticalContentAlignment="Bottom" FontSize="14" Foreground="Green"/>
     </Grid>
 </Window>
