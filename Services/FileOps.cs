@@ -36,9 +36,9 @@ namespace PackViewer
 
             return (files.Select(r => r.FullName)).ToList();
         }
-        public static void ProceedWithSaving(ViewModel vm, string rootFolder, List<string> foldersToSave, bool deleteOriginal)
+        public static void ProceedWithSaving(ViewModel vm, string rootFolder, string subFolder, List<PackFolder> folders)
         {
-            var destFolder = Path.Combine(rootFolder, "_Saved");
+            var destFolder = Path.Combine(rootFolder, subFolder);
             try
             {
                 if (!Directory.Exists(destFolder))
@@ -49,21 +49,19 @@ namespace PackViewer
                 Console.WriteLine(e.Message);
             }
 
-            foreach (var folder in foldersToSave)
+            foreach (var folder in folders.Where(r => r.Status == Status.Save))
             {
                 try
                 {
-                    var newFolder = Path.Combine(destFolder, folder.Replace(rootFolder, ""));
-                    CopyFilesRecursively(folder, newFolder);
+                    var newFolder = Path.Combine(destFolder, folder.FullPath.Replace(rootFolder, ""));
+                    Application.Current.Dispatcher.Invoke(DispatcherPriority.Background, new Action(() => { vm.StatusBottom = $"Copying {folder.FullPath}"; }));
+                    CopyFilesRecursively(folder.FullPath, newFolder);
                 }
                 catch (Exception e)
                 {
                     Console.WriteLine(e.Message);
                 }
             }
-
-            if (deleteOriginal)
-                ProceedWithDeletion(foldersToSave, vm);
         }
 
         private static void CopyFilesRecursively(string sourcePath, string targetPath)
@@ -83,23 +81,30 @@ namespace PackViewer
                 File.Copy(newPath, newPath.Replace(sourcePath, targetPath), true);
             }
         }
-        public static void ProceedWithDeletion(List<string> foldersToDelete, ViewModel vm)
+
+        public static void ProceedWithDeletion(ViewModel vm, List<PackFolder> folders, Status status)
         {
             int skipped = 0;
 
-            foreach (var folder in foldersToDelete.OrderByDescending(r => r.Length))
+            foreach (var folder in folders.Where(r=>r.Status==status).OrderByDescending(r => r.FullPath.Length))
             {
+                if (folder.FavImages.Any())
+                {
+                    skipped++;
+                    continue;
+                }
+
                 try
                 {
-                    if (System.IO.Directory.GetDirectories(folder).Length > 0)
+                    if (System.IO.Directory.GetDirectories(folder.FullPath).Length > 0)
                         skipped++;
                     else
                     {
-                        Application.Current.Dispatcher.Invoke(DispatcherPriority.Background, new Action(() => { vm.StatusBottom = $"Deleting {folder}"; }));
-                        DeleteFolder(folder);
+                        Application.Current.Dispatcher.Invoke(DispatcherPriority.Background, new Action(() => { vm.StatusBottom = $"Deleting {folder.FullPath}"; }));
+                        DeleteFolder(folder.FullPath);
                     }
 
-                    var folderUp = Path.GetFullPath(Path.Combine(folder, @"..\"));
+                    var folderUp = Path.GetFullPath(Path.Combine(folder.FullPath, @"..\"));
                     if (System.IO.Directory.GetDirectories(folderUp).Length == 0)
                     {
                         DeleteFolder(folderUp);
@@ -111,7 +116,7 @@ namespace PackViewer
                 }
             }
             if (skipped > 0)
-                MessageBox.Show($"{skipped} directories were not removed since they contain subdirectories.");
+                MessageBox.Show($"{skipped} directories were not removed since they contain subdirectories of favorite images.");
         }
 
         private static void DeleteFolder(string folder)
@@ -123,28 +128,28 @@ namespace PackViewer
             catch { }
         }
 
-        internal static void ProceedWithCopyingFav(ViewModel vm, List<string> favImages)
+        internal static void ProceedWithCopyingFav(ViewModel vm, List<PackFolder> folders)
         {
-            foreach (var file in favImages)
-            {
-                try
+            foreach (var folder in folders)
+                foreach (var file in folder.FavImages)
                 {
-                    var folder = Path.GetDirectoryName(file);
-                    if (folder == null) continue;
-                    folder = Path.Combine(folder, "_FavPackViewer");
-                    if (!Directory.Exists(folder))
-                        Directory.CreateDirectory(folder);
+                    try
+                    {
+                        var fld = Path.GetDirectoryName(file);
+                        if (fld == null) continue;
+                        fld = Path.Combine(fld, Global.FolderFavName);
+                        if (!Directory.Exists(fld))
+                            Directory.CreateDirectory(fld);
 
-                    var newFile = Path.Combine(folder, Path.GetFileName(file));
-                    Application.Current.Dispatcher.Invoke(DispatcherPriority.Background, new Action(() => { vm.StatusBottom = $"Copying {file}"; }));
-                    File.Copy(file, newFile);
-
+                        var newFile = Path.Combine(fld, Path.GetFileName(file));
+                        Application.Current.Dispatcher.Invoke(DispatcherPriority.Background, new Action(() => { vm.StatusBottom = $"Copying {file}"; }));
+                        File.Copy(file, newFile);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e.Message);
+                    }
                 }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e.Message);
-                }
-            }
         }
     }
 }

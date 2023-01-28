@@ -39,7 +39,7 @@ namespace PackViewer
                 if (_autoTrashFolder && !FolderIsSaved && !FolderInThrash)
                 {
                     IsInThrash = true;
-                    _foldersToDelete.Add(_currentFolder);
+                    _currentFolder.Status=Status.Delete;
                 }
             }
         }
@@ -99,5 +99,7 @@ namespace PackViewer
             IsInThrash = false;
             AutoTrashFolder = false;
         }
+
+        
     }
 }

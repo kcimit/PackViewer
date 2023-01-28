@@ -97,9 +97,11 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Global.cs" />
     <Compile Include="ImageProcess\ImageProcess.cs" />
     <Compile Include="LibJpegTurboNet\ExifReader.cs" />
     <Compile Include="LibJpegTurboNet\ExifTags.cs" />
+    <Compile Include="PackView\PackFolder.cs" />
     <Compile Include="Services\FileOps.cs" />
     <Compile Include="LibJpegTurboNet\DecompressedImage.cs" />
     <Compile Include="LibJpegTurboNet\Enums.cs" />

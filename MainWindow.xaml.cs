@@ -137,7 +137,7 @@ namespace PackViewer
             var save = false;
 
             
-            var cntDel = PackView.FoldersTrashed.Count;
+            var cntDel = PackView.FoldersThrashed;
             if (cntDel != 0)
             {
                 var confirm = MessageBox.Show($"There {cntDel} folder marked for deletion. Do you really want them to delete?", "Confirmation", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
@@ -147,7 +147,7 @@ namespace PackViewer
                 if (confirm == MessageBoxResult.Yes)
                     delete=true;
             }
-            var cntSave = PackView.FoldersSaved.Count;
+            var cntSave = PackView.FoldersSaved;
             if (cntSave != 0)
             {
                 var confirm = MessageBox.Show($"There {cntSave} folders marked for save. Do you want them to copy to _Saved folder?", "Confirmation", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
@@ -161,7 +161,6 @@ namespace PackViewer
                     deleteOriginal = confirm == MessageBoxResult.Yes;
                 }
             }
-
             
             if (cancel)
             {
