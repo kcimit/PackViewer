@@ -36,7 +36,7 @@ namespace PackViewer
 
             return (files.Select(r => r.FullName)).ToList();
         }
-        public static void ProceedWithSaving(ViewModel vm, string rootFolder, string subFolder, List<PackFolder> folders)
+        public static void ProceedWithSaving(ViewModel vm, bool deleteSource, string rootFolder, string subFolder, Status status, List<PackFolder> folders)
         {
             var destFolder = Path.Combine(rootFolder, subFolder);
             try
@@ -49,13 +49,16 @@ namespace PackViewer
                 Console.WriteLine(e.Message);
             }
 
-            foreach (var folder in folders.Where(r => r.Status == Status.Save))
+            foreach (var folder in folders.Where(r => r.Status == status))
             {
                 try
                 {
                     var newFolder = Path.Combine(destFolder, folder.FullPath.Replace(rootFolder, ""));
                     Application.Current.Dispatcher.Invoke(DispatcherPriority.Background, new Action(() => { vm.StatusBottom = $"Copying {folder.FullPath}"; }));
-                    CopyFilesRecursively(folder.FullPath, newFolder);
+                    if (deleteSource)
+                        MoveFilesRecursively(folder.FullPath, newFolder);
+                    else
+                        CopyFilesRecursively(folder.FullPath, newFolder);
                 }
                 catch (Exception e)
                 {
@@ -71,22 +74,32 @@ namespace PackViewer
 
             //Now Create all of the directories
             foreach (string dirPath in Directory.GetDirectories(sourcePath, "*", SearchOption.AllDirectories))
-            {
                 Directory.CreateDirectory(dirPath.Replace(sourcePath, targetPath));
-            }
 
             //Copy all the files & Replaces any files with the same name
             foreach (string newPath in Directory.GetFiles(sourcePath, "*.*", SearchOption.AllDirectories))
-            {
                 File.Copy(newPath, newPath.Replace(sourcePath, targetPath), true);
-            }
+        }
+
+        private static void MoveFilesRecursively(string sourcePath, string targetPath)
+        {
+            if (!Directory.Exists(targetPath))
+                Directory.CreateDirectory(targetPath);
+
+            //Now Create all of the directories
+            foreach (string dirPath in Directory.GetDirectories(sourcePath, "*", SearchOption.AllDirectories))
+                Directory.CreateDirectory(dirPath.Replace(sourcePath, targetPath));
+
+            //Copy all the files & Replaces any files with the same name
+            foreach (string newPath in Directory.GetFiles(sourcePath, "*.*", SearchOption.AllDirectories))
+                File.Move(newPath, newPath.Replace(sourcePath, targetPath));
         }
 
         public static void ProceedWithDeletion(ViewModel vm, List<PackFolder> folders, Status status)
         {
             int skipped = 0;
 
-            foreach (var folder in folders.Where(r=>r.Status==status).OrderByDescending(r => r.FullPath.Length))
+            foreach (var folder in folders.Where(r => r.Status == status).OrderByDescending(r => r.FullPath.Length))
             {
                 if (folder.FavImages.Any())
                 {
@@ -101,13 +114,13 @@ namespace PackViewer
                     else
                     {
                         Application.Current.Dispatcher.Invoke(DispatcherPriority.Background, new Action(() => { vm.StatusBottom = $"Deleting {folder.FullPath}"; }));
-                        DeleteFolder(folder.FullPath);
+                        DeleteFolder(folder.FullPath, folder.Files);
                     }
 
                     var folderUp = Path.GetFullPath(Path.Combine(folder.FullPath, @"..\"));
                     if (System.IO.Directory.GetDirectories(folderUp).Length == 0)
                     {
-                        DeleteFolder(folderUp);
+                        DeleteFolder(folderUp, null);
                     }
                 }
                 catch (Exception e)
@@ -119,13 +132,21 @@ namespace PackViewer
                 MessageBox.Show($"{skipped} directories were not removed since they contain subdirectories of favorite images.");
         }
 
-        private static void DeleteFolder(string folder)
+        private static void DeleteFolder(string folder, List<string> files)
         {
             try
             {
-                Directory.Delete(folder, true);
+                if (files != null)
+                    foreach (string file in files)
+                        File.Delete(file);
+
+                if (!Directory.EnumerateFileSystemEntries(folder).Any())
+                    Directory.Delete(folder, true);
             }
-            catch { }
+            catch (Exception e)
+            {
+                Console.Write(e.Message);
+            }
         }
 
         internal static void ProceedWithCopyingFav(ViewModel vm, List<PackFolder> folders)

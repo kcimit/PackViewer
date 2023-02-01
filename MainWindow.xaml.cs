@@ -135,8 +135,7 @@ namespace PackViewer
             var deleteOriginal = false;
             var cancel = false;
             var save = false;
-
-            
+                        
             var cntDel = PackView.FoldersThrashed;
             if (cntDel != 0)
             {

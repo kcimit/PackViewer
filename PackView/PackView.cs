@@ -418,22 +418,21 @@ namespace PackViewer
         }
         public void Finalize(bool delete, bool save, bool deleteOriginal)
         {
-                       
             FileOps.ProceedWithCopyingFav(this, _folders);
 
             if (save)
             {
-                FileOps.ProceedWithSaving(this, _rootFolder, Global.FolderSavedName, _folders);
+                FileOps.ProceedWithSaving(this, deleteOriginal, _rootFolder, Global.FolderSavedName, Status.Save, _folders);
                 if (deleteOriginal)
-                    FileOps.ProceedWithDeletion(this, _folders, Status.Save);
+                   FileOps.ProceedWithDeletion(this, _folders, Status.Save);
             }
 
             if (delete)
             {
                 if (Global.BackupDeleted)
                 {
-                    FileOps.ProceedWithSaving(this, _rootFolder, Global.FolderDeletedName, _folders);
-                    FileOps.ProceedWithDeletion(this, _folders, Status.Save);
+                    FileOps.ProceedWithSaving(this, true, _rootFolder, Global.FolderDeletedName, Status.Delete, _folders);
+                    FileOps.ProceedWithDeletion(this, _folders, Status.Delete);
                 }
                 else
                     FileOps.ProceedWithDeletion(this, _folders, Status.Delete);
