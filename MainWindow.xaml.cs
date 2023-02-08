@@ -45,7 +45,7 @@ namespace PackViewer
                     return;
 
                 var file = filesInFolder[currentIndex];
-                ShowStatus();
+                var fromCache = false;
                 var numRetries = 15;
                 byte[] BitmapStream = null;
                 Rotation rot = Rotation.Rotate0;
@@ -54,7 +54,7 @@ namespace PackViewer
                 {
                     try
                     {
-                        BitmapStream = PackView.GetImage(file, out rot);
+                        BitmapStream = PackView.GetImage(file, out rot, out fromCache);
                         break;
                     }
                     catch
@@ -63,6 +63,8 @@ namespace PackViewer
                         Thread.Sleep(200);
                     }
                 }
+                ShowStatus(fromCache);
+
                 if (BitmapStream == null)
                     throw new Exception($"Cannot acces file {file}");
 
@@ -79,10 +81,10 @@ namespace PackViewer
             }
         }
 
-        private void ShowStatus()
+        private void ShowStatus(bool fromCache)
         {
             if (filesInFolder != null)
-                PackView.StatusBottom = $"({currentIndex+1}/{filesInFolder.Count}) [{PackView.CurrentFolderIndex + 1}/{PackView.FoldersCount}] {filesInFolder[currentIndex]}";
+                PackView.StatusBottom = $"({currentIndex+1}/{filesInFolder.Count}) [{PackView.CurrentFolderIndex + 1}/{PackView.FoldersCount}] {filesInFolder[currentIndex]} {(fromCache ? "*" : "" )}";
         }
 
         private void Window_KeyDown(object sender, KeyEventArgs e)
@@ -267,7 +269,7 @@ namespace PackViewer
                 {
                     PackView.Init(_file, token);
                     PackView.BuildFolderList(token);
-                    ShowStatus();
+                    ShowStatus(false);
                 }
                 catch (Exception e)
                 {

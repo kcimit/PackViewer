@@ -101,6 +101,7 @@
     <Compile Include="ImageProcess\ImageProcess.cs" />
     <Compile Include="LibJpegTurboNet\ExifReader.cs" />
     <Compile Include="LibJpegTurboNet\ExifTags.cs" />
+    <Compile Include="PackView\ImageQueue.cs" />
     <Compile Include="PackView\PackFolder.cs" />
     <Compile Include="Services\FileOps.cs" />
     <Compile Include="LibJpegTurboNet\DecompressedImage.cs" />

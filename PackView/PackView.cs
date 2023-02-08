@@ -35,7 +35,8 @@ namespace PackViewer
     {
         CachedFiles _cache;
         private long _totalMemory, _cacheSize;
-        Queue<Action> _imageLoadingQueue;
+        //Queue<Action> _imageLoadingQueue;
+        ImageQueue _imageLoadingQueue;
         public int StartImageIndex => _startImageIndex;
         public string CurrentFolderName => _currentFolder.FullPath;
         public int Enqueued => _imageLoadingQueue.Count;
@@ -58,7 +59,6 @@ namespace PackViewer
 
         Task _queueTask;
         string _startFile;
-        private int _queueCount;
         
         public static bool IsRaw(string file) => file.ToLower().EndsWith("cr2") || file.ToLower().EndsWith("cr3") || file.ToLower().EndsWith("arw");
         public List<string> GetCurrentFolderImages
@@ -74,7 +74,11 @@ namespace PackViewer
         }
         private void RemoveCache(PackFolder folder)
         {
-            _cacheSize -= folder.ClearCache();
+            lock (_imageLoadingQueue)
+            {
+                _imageLoadingQueue.StopLoading(folder);
+                _cacheSize -= folder.ClearCache();
+            }
         }
         private void EnqueuLoadingFiles(PackFolder currentFolder, PackFolder nextImageFolder)
         {
@@ -85,6 +89,7 @@ namespace PackViewer
             if (!currentFolder.HasCache)
             {
                 currentFolder.ImagesCache = new Dictionary<string, byte[]>();
+                currentFolder.Cachesize = 0;
                 if (!currentFolder.HasRotCache)
                     currentFolder.RotCache = new Dictionary<string, Rotation>();
                 foreach (var file in currentFolder.Files)
@@ -93,6 +98,7 @@ namespace PackViewer
             if (nextImageFolder!=null && !nextImageFolder.HasCache)
             {
                 nextImageFolder.ImagesCache = new Dictionary<string, byte[]>();
+                nextImageFolder.Cachesize = 0;
                 if (!nextImageFolder.HasRotCache)
                     nextImageFolder.RotCache = new Dictionary<string, Rotation>();
 
@@ -104,8 +110,10 @@ namespace PackViewer
         public void FolderUp()
         {
             if (_indexOfCurrentFolder == 0) return;
-            if (_indexOfCurrentFolder + 1 < _folders.Count && _folders[_indexOfCurrentFolder + 1].HasCache)
+            if (_indexOfCurrentFolder + 1 < _folders.Count)
+            {
                 RemoveCache(_folders[_indexOfCurrentFolder + 1]);
+            }
 
             _indexOfCurrentFolder--;
             _currentFolder = _folders[_indexOfCurrentFolder];
@@ -118,8 +126,7 @@ namespace PackViewer
             if (_indexOfCurrentFolder + 1 >= _folders.Count)
                 return;
 
-            if (_currentFolder.HasCache)
-                RemoveCache(_currentFolder);
+            RemoveCache(_currentFolder);
 
             _indexOfCurrentFolder++;
             _currentFolder = _folders[_indexOfCurrentFolder];
@@ -150,17 +157,19 @@ namespace PackViewer
                 _currentFolder.FavImages.Add(v);
         }
 
-        internal byte[] GetImage(string file, out Rotation rot)
+        internal byte[] GetImage(string file, out Rotation rot, out bool fromCache)
         {
             if (_currentFolder.HasCache && _currentFolder.ImagesCache.ContainsKey(file))
             {
                 rot = _currentFolder.RotCache[file];
+                fromCache = true;
                 return _currentFolder.ImagesCache[file];
             }
             else
             {
                 using (Stream BitmapStream = System.IO.File.Open(file, System.IO.FileMode.Open))
                 {
+                    fromCache = false;
                     byte[] array = new byte[new FileInfo(file).Length];
                     FileOps.ReadWholeArray(BitmapStream, array);
 
@@ -206,63 +215,66 @@ namespace PackViewer
         {
             lock (_imageLoadingQueue)
             {
-                if (_cacheSize > _totalMemory) return;
+                if (_cacheSize > _totalMemory) 
+                    return;
+
                 var folder=_folders.Where(r=>r.FullPath.Equals(key)).FirstOrDefault();
 
                 ///
                 // Why this condition is here?
-                if (folder==null || folder.ImagesCache==null) return;
+                if (folder==null || folder.ImagesCache==null) 
+                    return;
 
-                _imageLoadingQueue.Enqueue(() =>
-                {
-                    try
-                    {
-                        if (folder.ImagesCache.ContainsKey(file)) return;
-
-                        using (Stream BitmapStream = System.IO.File.Open(file, System.IO.FileMode.Open))
-                        {
-                            byte[] array = new byte[new FileInfo(file).Length];
-                            FileOps.ReadWholeArray(BitmapStream, array);
-                            folder.ImagesCache.Add(file, array);
-                            _cacheSize += array.Length;
-                            folder.RotCache.Add(file, GetOrientation(array));
-                        }
-                        
-                    }
-                    catch { }
-                });
+                _imageLoadingQueue.Enqueue(new ActionItem { Folder = folder, File = file, Action = ActionType.LoadImage });
             }
         }
         public void Init(string file, System.Threading.CancellationToken token)
         {
             using (Process proc = Process.GetCurrentProcess())
             {
-                _totalMemory = proc.PrivateMemorySize64 / 2;
+                _totalMemory = proc.PrivateMemorySize64;
             }
             _cacheSize = 0;
             _startFile = file;
-            _imageLoadingQueue = new Queue<Action>();
+            _imageLoadingQueue = new ImageQueue();
             _cache = new CachedFiles();
-            _queueCount = 0;
             CanStartView = ReadyStatus.WaitingForFolderList;
             StartQueueTask(token);
         }
-        
+
         private void StartQueueTask(System.Threading.CancellationToken token)
         {
             _queueTask = Task.Factory.StartNew(() =>
               {
                   while (true && !token.IsCancellationRequested)
                   {
-                      if (_queueCount!=Enqueued)
-                      {
-                          _queueCount = Enqueued;
-                            StatusTop = $"{_queueCount}";
-                      }
+                      StatusTop = Enqueued == 0 ? "" : $"Caching: {Enqueued}";
+
                       lock (_imageLoadingQueue)
                       {
                           if (_imageLoadingQueue.Count > 0)
-                              _imageLoadingQueue.Dequeue().Invoke();
+                          {
+                              var action = _imageLoadingQueue.Dequeue();
+                              if (action != null && action.Action == ActionType.LoadImage)
+                              {
+                                  try
+                                  {
+                                      if (!action.Folder.ImagesCache.ContainsKey(action.File))
+                                      {
+                                          using (Stream BitmapStream = System.IO.File.Open(action.File, System.IO.FileMode.Open))
+                                          {
+                                              byte[] array = new byte[new FileInfo(action.File).Length];
+                                              FileOps.ReadWholeArray(BitmapStream, array);
+                                              action.Folder.ImagesCache.Add(action.File, array);
+                                              action.Folder.Cachesize += array.Length;
+                                              _cacheSize += array.Length;
+                                              action.Folder.RotCache.Add(action.File, GetOrientation(array));
+                                          }
+                                      }
+                                  }
+                                  catch { }
+                              }
+                          }
                       }
                   }
               });

@@ -36,6 +36,8 @@ namespace PackViewer
         public bool HasCache => ImagesCache!=null && ImagesCache.Keys.Any();
         public bool HasRotCache => RotCache != null && RotCache.Keys.Any();
 
+        public int Cachesize { get; internal set; }
+
         public Dictionary<string, byte[]> ImagesCache;
         public Dictionary<string, Rotation> RotCache;
 
@@ -43,9 +45,8 @@ namespace PackViewer
 
         public long ClearCache()
         {
-            var size = ImagesCache.Values.Sum(r => r.Length);
             ImagesCache=new Dictionary<string, byte[]>();
-            return size;
+            return Cachesize;
         }
     }
 }

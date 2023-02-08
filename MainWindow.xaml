@@ -166,7 +166,7 @@
                     <SolidColorBrush Opacity="0"/>
                 </Button.Background>
             </Button>
-        <Label Grid.Row="0" Content="{Binding StatusTop}" FontSize="14" Foreground="Green"/>
+        <Label Grid.Row="0" Content="{Binding StatusTop}" FontSize="14" Foreground="Green" Grid.ColumnSpan="2"/>
         <Label Grid.Row="10" Grid.ColumnSpan="8" Content="{Binding StatusBottom}" VerticalContentAlignment="Bottom" FontSize="14" Foreground="Green"/>
     </Grid>
 </Window>
