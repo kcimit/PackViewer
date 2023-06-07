@@ -10,7 +10,7 @@ namespace PackViewer
 {
     public partial class ViewModel : ViewModelBase
     {
-        bool _inThrash, _autoTrashFolder;
+        bool _inThrash, _autoTrashFolder, _autoRemoveFiles;
         bool _isSaved, _isFav;
         private string statusBottom;
         private string statusTop;
@@ -26,7 +26,6 @@ namespace PackViewer
                 OnPropertyChanged(nameof(IsInThrash));
             }
         }
-
         public bool AutoTrashFolder
         {
             get => _autoTrashFolder;
@@ -44,6 +43,17 @@ namespace PackViewer
             }
         }
 
+        public bool AutoRemoveFiles
+        {
+            get => _autoRemoveFiles;
+            set
+            {
+                if (_autoRemoveFiles == value) return;
+
+                _autoRemoveFiles = value;
+                OnPropertyChanged(nameof(AutoRemoveFiles));
+            }
+        }
 
         public bool IsSaved
         {
@@ -92,14 +102,15 @@ namespace PackViewer
             }
         }
 
+        public object SizeInMb { get; internal set; }
+
         public ViewModel()
         {
             uiSynchronizationContext = SynchronizationContext.Current;
             ControlsEnabled = true;
             IsInThrash = false;
             AutoTrashFolder = false;
+            AutoRemoveFiles = false;
         }
-
-        
     }
 }

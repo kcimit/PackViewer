@@ -55,41 +55,11 @@
             Margin="0"
             Stretch="Uniform"
             VerticalAlignment="Center"/>
-        <Button HorizontalAlignment="Left" Grid.Row="6" Grid.Column="0" BorderThickness="0" Click="ThrashButton_Click" ToolTip="Delete current folder (Shift-Delete)">
-            <Button.Background>
-                <SolidColorBrush Opacity="0"/>
-            </Button.Background>
-            <Path Width="50" Height="50" Data="M9,3V4H4V6H5V19A2,2 0 0,0 7,21H17A2,2 0 0,0 19,19V6H20V4H15V3H9M9,8H11V17H9V8M13,8H15V17H13V8Z" Stretch="Uniform">
-                <Path.Style>
-                    <Style TargetType="Path">
-                        <Setter Property="Fill" Value="Gray" />
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsInThrash}" Value="True">
-                                <Setter Property="Fill" Value="Red" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Path.Style>
-            </Path>
-        </Button>
+        
 
-        <ToggleButton HorizontalAlignment="Left" Grid.Row="8" Grid.Column="0" BorderThickness="0" IsChecked="{Binding AutoTrashFolder, Mode=TwoWay}" ToolTip="Auto delete folder">
-            <ToggleButton.Background>
-                <SolidColorBrush Opacity="0"/>
-            </ToggleButton.Background>
-            <ToggleButton.Style>
-                <Style TargetType="{x:Type ToggleButton}">
-                    <Setter Property="Background" Value="Transparent"/>
-                    <Style.Triggers>
-                        <Trigger Property="IsChecked" Value="true">
-                            <Setter Property="Background" Value="Green"/>
-                        </Trigger>
-                    </Style.Triggers>
-                </Style>
-            </ToggleButton.Style>
-            <Path Width="50" Height="50" Data="M9,3V4H4V6H5V19A2,2 0 0,0 7,21H17A2,2 0 0,0 19,19V6H20V4H15V3H9M7,6H17V19H7V6M9,8V17H11V8H9M13,8V17H15V8H13Z" Stretch="Uniform" Fill="Gray"/>
-        </ToggleButton>
-            <Button Grid.Row="2" Grid.Column="0" HorizontalAlignment="Left"  BorderThickness="0" Click="Save_Click" ToolTip="Save current folder (Shift-Insert)">
+        <!--Left panel buttons-->
+        <StackPanel Grid.Row="2" Grid.RowSpan="7" Grid.Column="0" VerticalAlignment="Center" >
+        <Button HorizontalAlignment="Left"  BorderThickness="0" Click="Save_Click" ToolTip="Save current folder (Shift-Insert)">
                 <Button.Background>
                     <SolidColorBrush Opacity="0"/>
                 </Button.Background>
@@ -106,7 +76,8 @@
                     </Path.Style>
                 </Path>
             </Button>
-        <Button Grid.Row="4" Grid.Column="0" HorizontalAlignment="Left" BorderThickness="0" Click="Fav_Click" ToolTip="Add current image to favorites (Ctrl-S)">
+        <Rectangle Height="20" />
+        <Button HorizontalAlignment="Left" BorderThickness="0" Click="Fav_Click" ToolTip="Add current image to favorites (Ctrl-S)">
             <Button.Background>
                 <SolidColorBrush Opacity="0"/>
             </Button.Background>
@@ -123,15 +94,67 @@
                 </Path.Style>
             </Path>
         </Button>
+        <Rectangle Height="20" />
+        <ToggleButton HorizontalAlignment="Left" BorderThickness="0" IsChecked="{Binding AutoRemoveFiles, Mode=TwoWay}" ToolTip="Auto remove viewed files">
+                <ToggleButton.Background>
+                    <SolidColorBrush Opacity="0"/>
+                </ToggleButton.Background>
+                <ToggleButton.Style>
+                    <Style TargetType="{x:Type ToggleButton}">
+                        <Setter Property="Background" Value="Transparent"/>
+                        <Style.Triggers>
+                            <Trigger Property="IsChecked" Value="true">
+                                <Setter Property="Background" Value="Green"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </ToggleButton.Style>
+                <Path Width="50" Height="50" Data="M11.83,9L15,12.16C15,12.11 15,12.05 15,12A3,3 0 0,0 12,9C11.94,9 11.89,9 11.83,9M7.53,9.8L9.08,11.35C9.03,11.56 9,11.77 9,12A3,3 0 0,0 12,15C12.22,15 12.44,14.97 12.65,14.92L14.2,16.47C13.53,16.8 12.79,17 12,17A5,5 0 0,1 7,12C7,11.21 7.2,10.47 7.53,9.8M2,4.27L4.28,6.55L4.73,7C3.08,8.3 1.78,10 1,12C2.73,16.39 7,19.5 12,19.5C13.55,19.5 15.03,19.2 16.38,18.66L16.81,19.08L19.73,22L21,20.73L3.27,3M12,7A5,5 0 0,1 17,12C17,12.64 16.87,13.26 16.64,13.82L19.57,16.75C21.07,15.5 22.27,13.86 23,12C21.27,7.61 17,4.5 12,4.5C10.6,4.5 9.26,4.75 8,5.2L10.17,7.35C10.74,7.13 11.35,7 12,7Z" Stretch="Uniform" Fill="Gray"/>
+            </ToggleButton>
+        <Rectangle Height="20" />
+        <Button HorizontalAlignment="Left" BorderThickness="0" Click="ThrashButton_Click" ToolTip="Delete current folder (Shift-Delete)">
+            <Button.Background>
+                <SolidColorBrush Opacity="0"/>
+            </Button.Background>
+            <Path Width="50" Height="50" Data="M9,3V4H4V6H5V19A2,2 0 0,0 7,21H17A2,2 0 0,0 19,19V6H20V4H15V3H9M9,8H11V17H9V8M13,8H15V17H13V8Z" Stretch="Uniform">
+                <Path.Style>
+                    <Style TargetType="Path">
+                        <Setter Property="Fill" Value="Gray" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsInThrash}" Value="True">
+                                <Setter Property="Fill" Value="Red" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Path.Style>
+            </Path>
+        </Button>
+        <Rectangle Height="20" />
+        <ToggleButton HorizontalAlignment="Left" BorderThickness="0" IsChecked="{Binding AutoTrashFolder, Mode=TwoWay}" ToolTip="Auto delete folder">
+            <ToggleButton.Background>
+                <SolidColorBrush Opacity="0"/>
+            </ToggleButton.Background>
+            <ToggleButton.Style>
+                <Style TargetType="{x:Type ToggleButton}">
+                    <Setter Property="Background" Value="Transparent"/>
+                    <Style.Triggers>
+                        <Trigger Property="IsChecked" Value="true">
+                            <Setter Property="Background" Value="Green"/>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </ToggleButton.Style>
+            <Path Width="50" Height="50" Data="M9,3V4H4V6H5V19A2,2 0 0,0 7,21H17A2,2 0 0,0 19,19V6H20V4H15V3H9M7,6H17V19H7V6M9,8V17H11V8H9M13,8V17H15V8H13Z" Stretch="Uniform" Fill="Gray"/>
+        </ToggleButton>
+        </StackPanel>
         
-
+        <!--Right panel buttons-->
         <Button HorizontalAlignment="Left" Grid.Row="0" Grid.Column="7" BorderThickness="0" Click="Exit_Click" ToolTip="Exit">
             <Button.Background>
                 <SolidColorBrush Opacity="0"/>
             </Button.Background>
             <Path x:Name="Exit" Width="60" Fill="Gray" Height="60" Data="M13.34,8.17C12.41,8.17 11.65,7.4 11.65,6.47A1.69,1.69 0 0,1 13.34,4.78C14.28,4.78 15.04,5.54 15.04,6.47C15.04,7.4 14.28,8.17 13.34,8.17M10.3,19.93L4.37,18.75L4.71,17.05L8.86,17.9L10.21,11.04L8.69,11.64V14.5H7V10.54L11.4,8.67L12.07,8.59C12.67,8.59 13.17,8.93 13.5,9.44L14.36,10.79C15.04,12 16.39,12.82 18,12.82V14.5C16.14,14.5 14.44,13.67 13.34,12.4L12.84,14.94L14.61,16.63V23H12.92V17.9L11.14,16.21L10.3,19.93M21,23H19V3H6V16.11L4,15.69V1H21V23M6,23H4V19.78L6,20.2V23Z"  Stretch="Uniform"/>
         </Button>
-
         <Button HorizontalAlignment="Right" Grid.Row="6" Grid.Column="7" BorderThickness="0" Click="FolderUpButton_Click" ToolTip="Folder up (up arrow)">
             <Button.Background>
                 <SolidColorBrush Opacity="0"/>
@@ -156,6 +179,8 @@
             </Button.Background>
             <Path  Width="60" Height="60" Data="M13,6V18L21.5,12M4,18L12.5,12L4,6V18Z" Fill="Gray" Stretch="Uniform"  />
         </Button>
+        
+        <!--Directional buttons left/right-->
         <Button  Style="{StaticResource NoHoverButton}" HorizontalAlignment="Stretch" Grid.Row="1" Grid.RowSpan="9" Grid.Column="1" Grid.ColumnSpan="3" BorderThickness="0" Click="PrevImageButton_Click">
                 <Button.Background>
                     <SolidColorBrush Opacity="0"/>
@@ -166,6 +191,7 @@
                     <SolidColorBrush Opacity="0"/>
                 </Button.Background>
             </Button>
+        
         <Label Grid.Row="0" Content="{Binding StatusTop}" FontSize="14" Foreground="Green" Grid.ColumnSpan="2"/>
         <Label Grid.Row="10" Grid.ColumnSpan="8" Content="{Binding StatusBottom}" VerticalContentAlignment="Bottom" FontSize="14" Foreground="Green"/>
     </Grid>

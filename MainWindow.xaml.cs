@@ -17,7 +17,7 @@ namespace PackViewer
         ViewModel PackView;
 
         readonly int FastForwardValue = 10;
-        readonly bool enableLibRaw = false;
+        readonly bool enableLibRaw = true;
         List<string> filesInFolder;
         int currentIndex;
         string _file;
@@ -32,7 +32,7 @@ namespace PackViewer
 
             PackView = new ViewModel();
             _file = file;
-            enableLibRaw = ViewModel.IsRaw(file);
+            //enableLibRaw = ViewModel.IsRaw(file);
             DataContext = PackView;
             tokenSource = new CancellationTokenSource();
             token = tokenSource.Token;
@@ -75,6 +75,7 @@ namespace PackViewer
 
                 BitmapStream = null;
                 PackView.IsFav = PackView.GetFavStatus(file);
+                PackView.AddToAutoRemoveList(filesInFolder[currentIndex]);
             }
             catch (Exception e) {
                 MessageBox.Show(e.Message);
@@ -84,7 +85,7 @@ namespace PackViewer
         private void ShowStatus(bool fromCache)
         {
             if (filesInFolder != null)
-                PackView.StatusBottom = $"({currentIndex+1}/{filesInFolder.Count}) [{PackView.CurrentFolderIndex + 1}/{PackView.FoldersCount}] {filesInFolder[currentIndex]} {(fromCache ? "*" : "" )}";
+                PackView.StatusBottom = $"({currentIndex+1}/{filesInFolder.Count}) [{PackView.CurrentFolderIndex + 1}/{PackView.FoldersCount}] {filesInFolder[currentIndex]} ({PackView.SizeInMb}) {(fromCache ? "*" : "" )}";
         }
 
         private void Window_KeyDown(object sender, KeyEventArgs e)

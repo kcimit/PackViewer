@@ -157,6 +157,18 @@ namespace PackViewer
                 _currentFolder.FavImages.Add(v);
         }
 
+        internal void AddToAutoRemoveList(string v)
+        {
+            if (!AutoRemoveFiles)
+            {
+                if (_currentFolder.AutoRemoveImages.Contains(v))
+                    _currentFolder.AutoRemoveImages.Remove(v);
+            }
+            else
+                if (!_currentFolder.AutoRemoveImages.Contains(v))
+                    _currentFolder.AutoRemoveImages.Add(v);
+        }
+
         internal byte[] GetImage(string file, out Rotation rot, out bool fromCache)
         {
             if (_currentFolder.HasCache && _currentFolder.ImagesCache.ContainsKey(file))
@@ -167,7 +179,7 @@ namespace PackViewer
             }
             else
             {
-                using (Stream BitmapStream = System.IO.File.Open(file, System.IO.FileMode.Open))
+                using (Stream BitmapStream = System.IO.File.Open(file, FileMode.Open, FileAccess.Read))
                 {
                     fromCache = false;
                     byte[] array = new byte[new FileInfo(file).Length];
@@ -261,7 +273,7 @@ namespace PackViewer
                                   {
                                       if (!action.Folder.ImagesCache.ContainsKey(action.File))
                                       {
-                                          using (Stream BitmapStream = System.IO.File.Open(action.File, System.IO.FileMode.Open))
+                                          using (Stream BitmapStream = System.IO.File.Open(action.File, System.IO.FileMode.Open, FileAccess.Read))
                                           {
                                               byte[] array = new byte[new FileInfo(action.File).Length];
                                               FileOps.ReadWholeArray(BitmapStream, array);
@@ -285,7 +297,7 @@ namespace PackViewer
             if (dir.Equals(imageFolder))
                 return;
 
-            if (!StartFolderIsSaved && (dir.Contains(Global.FolderDeletedName) || dir.Contains(Global.FolderSavedName) || dir.Contains(Global.FolderFavName)))
+            if (!StartFolderIsSaved && (dir.Contains(Global.FolderDeletedName) || dir.Contains(Global.FolderSavedName) || dir.Contains(Global.FolderAutoRemoveName) || dir.Contains(Global.FolderFavName)))
                 return;
 
             if (_cache.Files.Any() && _cache.Files.TryGetValue(dir, out List<string> f))
@@ -410,6 +422,9 @@ namespace PackViewer
 
         private void WriteCacheFile()
         {
+            if (_folders.Count < Global.MinNumberOfFoldersToCache)
+                return;
+
             if (!Directory.Exists(_rootFolder))
                 return;
 
@@ -431,6 +446,7 @@ namespace PackViewer
         public void Finalize(bool delete, bool save, bool deleteOriginal)
         {
             FileOps.ProceedWithCopyingFav(this, _folders);
+            FileOps.ProceedWithAutoMoving(this, _folders);
 
             if (save)
             {
@@ -449,7 +465,6 @@ namespace PackViewer
                 else
                     FileOps.ProceedWithDeletion(this, _folders, Status.Delete);
             }
-
             WriteCacheFile();
         }
     }

@@ -27,6 +27,7 @@ namespace PackViewer
             LIBRAW_UNSUPPORTED_THUMBNAIL = -6,
             LIBRAW_INPUT_CLOSED = -7,
             LIBRAW_NOT_IMPLEMENTED = -8,
+            LIBRAW_REQUEST_FOR_NONEXISTENT_THUMBNAIL = -9,
             LIBRAW_UNSUFFICIENT_MEMORY = -100007,
             LIBRAW_DATA_ERROR = -100008,
             LIBRAW_IO_ERROR = -100009,
@@ -69,6 +70,7 @@ namespace PackViewer
             LIBRAW_PROGRESS_STAGE25 = 1 << 25,
             LIBRAW_PROGRESS_STAGE26 = 1 << 26,
             LIBRAW_PROGRESS_STAGE27 = 1 << 27,
+
             LIBRAW_PROGRESS_THUMB_LOAD = 1 << 28,
             LIBRAW_PROGRESS_TRESERVED1 = 1 << 29,
             LIBRAW_PROGRESS_TRESERVED2 = 1 << 30
@@ -246,6 +248,14 @@ namespace PackViewer
             LIBRAW_CAMERAMAKER_YI,
             LIBRAW_CAMERAMAKER_Yuneec,
             LIBRAW_CAMERAMAKER_Zeiss,
+            LIBRAW_CAMERAMAKER_OnePlus,
+            LIBRAW_CAMERAMAKER_ISG,
+            LIBRAW_CAMERAMAKER_VIVO,
+            LIBRAW_CAMERAMAKER_HMD_Global,
+            LIBRAW_CAMERAMAKER_HUAWEI,
+            LIBRAW_CAMERAMAKER_RaspberryPi,
+            LIBRAW_CAMERAMAKER_OmDigital,
+
             // Insert additional indexes here
             LIBRAW_CAMERAMAKER_TheLastOne
         }
@@ -589,6 +599,4 @@ namespace PackViewer
         [DllImport("msvcrt", CharSet = CharSet.Ansi)]
         public static extern IntPtr strerror(int errc);
     }
-
-
 }

@@ -172,5 +172,33 @@ namespace PackViewer
                     }
                 }
         }
+
+        internal static void ProceedWithAutoMoving(ViewModel vm, List<PackFolder> folders)
+        {
+            foreach (var folder in folders.Where(r=>r.Status== Status.None && r.AutoRemoveImages.Any()))
+                foreach (var file in folder.AutoRemoveImages)
+                {
+                    try
+                    {
+                        if (folder.FavImages.Contains(file))
+                            continue;
+
+                        var fld = Path.GetDirectoryName(file);
+                        if (fld == null) continue;
+                        fld = Path.Combine(fld, Global.FolderAutoRemoveName);
+                        if (!Directory.Exists(fld))
+                            Directory.CreateDirectory(fld);
+
+                        var newFile = Path.Combine(fld, Path.GetFileName(file));
+                        Application.Current.Dispatcher.Invoke(DispatcherPriority.Background, new Action(() => { vm.StatusBottom = $"Copying {file}"; }));
+                        File.Move(file, newFile);
+                        folder.Files.Remove(file);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e.Message);
+                    }
+                }
+        }
     }
 }
