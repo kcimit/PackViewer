@@ -10,20 +10,24 @@ namespace PackViewer
 {
     public partial class ViewModel : ViewModelBase
     {
-        bool _inThrash, _autoTrashFolder, _autoRemoveFiles;
-        bool _isSaved, _isFav;
+        bool _folderInTrash, _autoTrashFolder, _autoRemoveFiles;
+        bool _folderIsSaved, _isFileSaved, _isFileDeleted;
         private string statusBottom;
         private string statusTop;
 
-        public bool IsInThrash
+        public int RightIconSize { get; set; } = 40;
+        public int IconSize { get; set; } = 40;
+        public int IconSpacing { get; set; } = 15;
+
+        public bool IsFolderInTrash
         {
-            get => _inThrash;
+            get => _folderInTrash;
             set
             {
-                if (_inThrash == value) return;
+                if (_folderInTrash == value) return;
 
-                _inThrash = value;
-                OnPropertyChanged(nameof(IsInThrash));
+                _folderInTrash = value;
+                OnPropertyChanged(nameof(IsFolderInTrash));
             }
         }
         public bool AutoTrashFolder
@@ -35,9 +39,9 @@ namespace PackViewer
 
                 _autoTrashFolder = value;
                 OnPropertyChanged(nameof(AutoTrashFolder));
-                if (_autoTrashFolder && !FolderIsSaved && !FolderInThrash)
+                if (_autoTrashFolder && !FolderIsSaved && !FolderInTrash)
                 {
-                    IsInThrash = true;
+                    IsFolderInTrash = true;
                     _currentFolder.Status=Status.Delete;
                 }
             }
@@ -57,24 +61,37 @@ namespace PackViewer
 
         public bool IsSaved
         {
-            get  => _isSaved;
+            get  => _folderIsSaved;
             set
             {
-                if (_isSaved == value) return;
+                if (_folderIsSaved == value) return;
 
-                _isSaved = value;
+                _folderIsSaved = value;
                 OnPropertyChanged(nameof(IsSaved));
             }
         }
-        public bool IsFav
+
+        public bool IsFileDeleted
         {
-            get => _isFav;
+            get => _isFileDeleted;
             set
             {
-                if (_isFav == value) return;
+                if (_isFileDeleted == value) return;
 
-                _isFav = value;
-                OnPropertyChanged(nameof(IsFav));
+                _isFileDeleted = value;
+                OnPropertyChanged(nameof(IsFileDeleted));
+            }
+        }
+
+        public bool IsFileSaved
+        {
+            get => _isFileSaved;
+            set
+            {
+                if (_isFileSaved == value) return;
+
+                _isFileSaved = value;
+                OnPropertyChanged(nameof(IsFileSaved));
             }
         }
 
@@ -108,7 +125,7 @@ namespace PackViewer
         {
             uiSynchronizationContext = SynchronizationContext.Current;
             ControlsEnabled = true;
-            IsInThrash = false;
+            IsFolderInTrash = false;
             AutoTrashFolder = false;
             AutoRemoveFiles = false;
         }

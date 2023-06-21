@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using static System.Windows.Forms.AxHost;
 
 namespace PackViewer
 {
@@ -50,10 +51,18 @@ namespace PackViewer
         private bool _allFoldersAreRead;
         List<PackFolder> _folders;
         public bool StartFolderIsSaved { get; private set; }
-        public bool FolderInThrash { get => _currentFolder.Status == Status.Delete; }
-        public bool FolderIsSaved { get => _currentFolder.Status == Status.Save; }
+        public bool FolderInTrash  => _currentFolder.Status == Status.Delete; 
+        public bool FolderIsSaved  => _currentFolder.Status == Status.Save; 
         public ReadyStatus CanStartView { get; private set; }
-        public bool GetFavStatus(string file) => _currentFolder!=null && _currentFolder.GetFavStatus(file);
+
+        public Status GetFileStatus(string file)
+        {
+            var stat = Status.None;
+            if (_currentFolder != null)
+                stat =_currentFolder.GetStatus(file);
+            return stat;
+        }
+
         public int FoldersThrashed => _folders.Count(r => r.Status == Status.Delete);
         public int FoldersSaved => _folders.Count(r => r.Status == Status.Save);
 
@@ -65,10 +74,10 @@ namespace PackViewer
         {
             get
             {
-                var _nextImageFolder = new PackFolder();
+                var nextImageFolder = new PackFolder();
                 if (_indexOfCurrentFolder + 1 < _folders.Count)
-                    _nextImageFolder = _folders[_indexOfCurrentFolder + 1];
-                EnqueuLoadingFiles(_currentFolder, _nextImageFolder);
+                    nextImageFolder = _folders[_indexOfCurrentFolder + 1];
+                EnqueuLoadingFiles(_currentFolder, nextImageFolder);
                 return _currentFolder.Files; 
             }
         }
@@ -117,7 +126,7 @@ namespace PackViewer
 
             _indexOfCurrentFolder--;
             _currentFolder = _folders[_indexOfCurrentFolder];
-            if (!FolderIsSaved && !FolderInThrash && AutoTrashFolder)
+            if (!FolderIsSaved && !FolderInTrash && AutoTrashFolder)
                 _currentFolder.Status=Status.Delete;
         }
 
@@ -130,43 +139,68 @@ namespace PackViewer
 
             _indexOfCurrentFolder++;
             _currentFolder = _folders[_indexOfCurrentFolder];
-            if (!FolderIsSaved && !FolderInThrash && AutoTrashFolder)
+            if (!FolderIsSaved && !FolderInTrash && AutoTrashFolder)
                _currentFolder.Status=Status.Delete;
         }
 
-        internal void ThrashIt()
+        internal void TrashFolder()
         {
             if (_currentFolder.Status == Status.Delete)
                 _currentFolder.Status = Status.None;
             else
                 _currentFolder.Status = Status.Delete;
+            
+            IsFolderInTrash = FolderInTrash;
         }
-        internal void SaveIt()
+        internal void SaveFolder()
         {
             if (_currentFolder.Status == Status.Save)
                 _currentFolder.Status = Status.None;
             else
                 _currentFolder.Status = Status.Save;
+
+            IsSaved = FolderIsSaved;
         }
 
-        internal void AddToFav(string v)
+        internal void SetFileStatus(string v, Status stat)
         {
-            if (_currentFolder.FavImages.Contains(v))
-                _currentFolder.FavImages.Remove(v);
+            if (!_currentFolder.ImagesStatus.ContainsKey(v))
+                _currentFolder.ImagesStatus.Add(v, stat);
             else
-                _currentFolder.FavImages.Add(v);
+            {
+                // Cannot delete favorite
+                if (_currentFolder.ImagesStatus[v] == Status.Save && stat == Status.Delete)
+                    return;
+
+                // Toggle status
+                if (_currentFolder.ImagesStatus[v] == stat)
+                    _currentFolder.ImagesStatus[v] = Status.None;
+                else
+                    _currentFolder.ImagesStatus[v] = stat;
+            }
+
+            IsFileDeleted = GetFileStatus(v) == Status.Delete;
+            IsFileSaved = GetFileStatus(v) == Status.Save;
         }
 
         internal void AddToAutoRemoveList(string v)
         {
-            if (!AutoRemoveFiles)
+            if (AutoRemoveFiles)
             {
-                if (_currentFolder.AutoRemoveImages.Contains(v))
-                    _currentFolder.AutoRemoveImages.Remove(v);
+                if (!_currentFolder.ImagesStatus.ContainsKey(v))
+                    _currentFolder.ImagesStatus.Add(v, Status.AutoDelete);
+                else
+                {
+                    if (_currentFolder.ImagesStatus[v] == Status.None) _currentFolder.ImagesStatus[v] = Status.AutoDelete;
+                }
             }
             else
-                if (!_currentFolder.AutoRemoveImages.Contains(v))
-                    _currentFolder.AutoRemoveImages.Add(v);
+            {
+                if (_currentFolder.ImagesStatus.ContainsKey(v) && _currentFolder.ImagesStatus[v] == Status.AutoDelete)
+                {
+                    _currentFolder.ImagesStatus[v] = Status.None;
+                }
+            }
         }
 
         internal byte[] GetImage(string file, out Rotation rot, out bool fromCache)
@@ -184,11 +218,18 @@ namespace PackViewer
                     fromCache = false;
                     byte[] array = new byte[new FileInfo(file).Length];
                     FileOps.ReadWholeArray(BitmapStream, array);
-
-                    rot = GetOrientation(array);
+                    if (IsJpegFile(file))
+                        rot = GetOrientation(array);
+                    else
+                        rot = Rotation.Rotate0;
                     return array;
                 }
             }
+        }
+
+        private static bool IsJpegFile(string file)
+        {
+            return file.EndsWith(".jpg") || file.EndsWith(".jpeg");
         }
 
         private static Rotation GetOrientation(byte [] array)
@@ -230,7 +271,7 @@ namespace PackViewer
                 if (_cacheSize > _totalMemory) 
                     return;
 
-                var folder=_folders.Where(r=>r.FullPath.Equals(key)).FirstOrDefault();
+                var folder=_folders.FirstOrDefault(r => r.FullPath.Equals(key));
 
                 ///
                 // Why this condition is here?
@@ -280,7 +321,9 @@ namespace PackViewer
                                               action.Folder.ImagesCache.Add(action.File, array);
                                               action.Folder.Cachesize += array.Length;
                                               _cacheSize += array.Length;
-                                              action.Folder.RotCache.Add(action.File, GetOrientation(array));
+                                              
+                                              var rot = IsJpegFile(action.File) ? GetOrientation(array):Rotation.Rotate0;
+                                              action.Folder.RotCache.Add(action.File, rot);
                                           }
                                       }
                                   }
@@ -387,7 +430,7 @@ namespace PackViewer
                     
                 }
                 _folders = _folders.OrderBy(r => r.FullPath).ToList();
-                _currentFolder = _folders.Where(r => r.FullPath.Equals(_currentFolder.FullPath)).FirstOrDefault();
+                _currentFolder = _folders.FirstOrDefault(r => r.FullPath.Equals(_currentFolder.FullPath));
                 _indexOfCurrentFolder = _folders.IndexOf(_currentFolder);
 
                 _allFoldersAreRead = true;
@@ -445,8 +488,7 @@ namespace PackViewer
         }
         public void Finalize(bool delete, bool save, bool deleteOriginal)
         {
-            FileOps.ProceedWithCopyingFav(this, _folders);
-            FileOps.ProceedWithAutoMoving(this, _folders);
+            FileOps.ProceedWithFiles(this, _folders);
 
             if (save)
             {

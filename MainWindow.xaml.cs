@@ -17,7 +17,6 @@ namespace PackViewer
         ViewModel PackView;
 
         readonly int FastForwardValue = 10;
-        readonly bool enableLibRaw = true;
         List<string> filesInFolder;
         int currentIndex;
         string _file;
@@ -32,7 +31,6 @@ namespace PackViewer
 
             PackView = new ViewModel();
             _file = file;
-            //enableLibRaw = ViewModel.IsRaw(file);
             DataContext = PackView;
             tokenSource = new CancellationTokenSource();
             token = tokenSource.Token;
@@ -66,15 +64,15 @@ namespace PackViewer
                 ShowStatus(fromCache);
 
                 if (BitmapStream == null)
-                    throw new Exception($"Cannot acces file {file}");
+                    throw new Exception($"Cannot access file {file}");
 
-                if (ViewModel.IsRaw(file) && enableLibRaw)
+                if (ViewModel.IsRaw(file))
                     ImageProcess.DecompressRaw(BitmapStream, DImage);
                 else
                     ImageProcess.DecompressJpeg(BitmapStream, DImage, rot);
 
                 BitmapStream = null;
-                PackView.IsFav = PackView.GetFavStatus(file);
+                PackView.IsFileSaved = PackView.GetFileStatus(file)==Status.Save;
                 PackView.AddToAutoRemoveList(filesInFolder[currentIndex]);
             }
             catch (Exception e) {
@@ -105,12 +103,14 @@ namespace PackViewer
                 LastImage();
             if (e.Key == Key.Home)
                 FirstImage();
+            if (Keyboard.IsKeyUp(Key.LeftShift) && Keyboard.IsKeyUp(Key.RightShift) && e.Key == Key.Delete)
+                TrashFile();
             if ((Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift)) && e.Key == Key.Delete)
-                ThrashIt();
+                TrashFolder();
             if ((Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift)) && e.Key == Key.Insert)
-                SaveIt();
+                SaveFolder();
             if ((Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl)) && e.Key == Key.S)
-                AddToFav();
+                AddFileToFav();
 
             e.Handled = true;
         }
@@ -181,47 +181,48 @@ namespace PackViewer
         {
             Close();
         }
-        private void ThrashButton_Click(object sender, RoutedEventArgs e)
+
+        private void TrashFileButton_Click(object sender, RoutedEventArgs e)
         {
-            ThrashIt();
+            TrashFile();
+        }
+
+        private void TrashFile()
+        {
+            PackView?.SetFileStatus(filesInFolder[currentIndex], Status.Delete);
+        }
+
+        private void TrashFolderButton_Click(object sender, RoutedEventArgs e)
+        {
+            TrashFolder();
         }
 
         
         private void Save_Click(object sender, RoutedEventArgs e)
         {
-            SaveIt();
+            SaveFolder();
         }
 
         private void Fav_Click(object sender, RoutedEventArgs e)
         {
-            AddToFav();
-        }
-        private void SaveIt()
-        {
-            if (PackView != null)
-            {
-                PackView.SaveIt();
-                PackView.IsSaved = PackView.FolderIsSaved;
-            }
+            AddFileToFav();
         }
 
-        private void AddToFav()
+        private void SaveFolder()
         {
-            if (PackView != null)
-            {
-                PackView.AddToFav(filesInFolder[currentIndex]);
-                PackView.IsFav = PackView.GetFavStatus(filesInFolder[currentIndex]);
-            }
+            PackView?.SaveFolder();
         }
 
-        private void ThrashIt()
+        private void AddFileToFav()
         {
-            if (PackView != null)
-            {
-                PackView.ThrashIt();
-                PackView.IsInThrash = PackView.FolderInThrash;
-            }
+            PackView?.SetFileStatus(filesInFolder[currentIndex], Status.Save);
         }
+
+        private void TrashFolder()
+        {
+            PackView?.TrashFolder();
+        }
+
         private void FastForwardButton_Click(object sender, RoutedEventArgs e)
         {
             if (PackView != null && filesInFolder!=null)
@@ -311,7 +312,7 @@ namespace PackViewer
             Dispatcher.Invoke(() =>
             {
                 currentIndex = 0;
-                PackView.IsInThrash = PackView.FolderInThrash;
+                PackView.IsFolderInTrash = PackView.FolderInTrash;
                 PackView.IsSaved = PackView.FolderIsSaved;
                 ShowImage();
             });
@@ -358,7 +359,7 @@ namespace PackViewer
         {
             try
             {
-                ImageProcess.Init(enableLibRaw);
+                ImageProcess.Init();
                 GetFolders();
             }
             catch (Exception exc)

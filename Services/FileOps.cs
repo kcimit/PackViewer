@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Threading;
 
 namespace PackViewer
@@ -101,7 +102,7 @@ namespace PackViewer
 
             foreach (var folder in folders.Where(r => r.Status == status).OrderByDescending(r => r.FullPath.Length))
             {
-                if (folder.FavImages.Any())
+                if (folder.ImagesStatus.Any(r=>r.Value== Status.Save))
                 {
                     skipped++;
                     continue;
@@ -149,50 +150,54 @@ namespace PackViewer
             }
         }
 
-        internal static void ProceedWithCopyingFav(ViewModel vm, List<PackFolder> folders)
+        internal static void ProceedWithFiles(ViewModel vm, List<PackFolder> folders)
         {
-            foreach (var folder in folders)
-                foreach (var file in folder.FavImages)
+            foreach (var folder in folders.Where(r => r.Status != Status.None))
+                foreach (var kvp in folder.ImagesStatus.Where(r=>r.Value!= Status.None))
                 {
                     try
                     {
-                        var fld = Path.GetDirectoryName(file);
+                        
+                        var fld = Path.GetDirectoryName(kvp.Key);
                         if (fld == null) continue;
-                        fld = Path.Combine(fld, Global.FolderFavName);
-                        if (!Directory.Exists(fld))
-                            Directory.CreateDirectory(fld);
+                        if (kvp.Value == Status.None)
+                        {
+                            fld = Path.Combine(fld, Global.FolderFavName);
+                            if (!Directory.Exists(fld))
+                                Directory.CreateDirectory(fld);
 
-                        var newFile = Path.Combine(fld, Path.GetFileName(file));
-                        Application.Current.Dispatcher.Invoke(DispatcherPriority.Background, new Action(() => { vm.StatusBottom = $"Copying {file}"; }));
-                        File.Copy(file, newFile);
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e.Message);
-                    }
-                }
-        }
+                            var newFile = Path.Combine(fld, Path.GetFileName(kvp.Key));
+                            Application.Current.Dispatcher.Invoke(DispatcherPriority.Background, new Action(() => { vm.StatusBottom = $"Copying {kvp.Key}"; }));
+                            try
+                            {
+                                File.Copy(kvp.Key, newFile);
+                            }
+                            catch (Exception e)
+                            {
+                                Console.WriteLine(e);
+                                throw;
+                            }
+                        }
+                        else if(kvp.Value == Status.AutoDelete || kvp.Value== Status.Delete) 
+                        {
+                            fld = Path.Combine(fld, Global.FolderAutoRemoveName);
+                            if (!Directory.Exists(fld))
+                                Directory.CreateDirectory(fld);
 
-        internal static void ProceedWithAutoMoving(ViewModel vm, List<PackFolder> folders)
-        {
-            foreach (var folder in folders.Where(r=>r.Status== Status.None && r.AutoRemoveImages.Any()))
-                foreach (var file in folder.AutoRemoveImages)
-                {
-                    try
-                    {
-                        if (folder.FavImages.Contains(file))
-                            continue;
-
-                        var fld = Path.GetDirectoryName(file);
-                        if (fld == null) continue;
-                        fld = Path.Combine(fld, Global.FolderAutoRemoveName);
-                        if (!Directory.Exists(fld))
-                            Directory.CreateDirectory(fld);
-
-                        var newFile = Path.Combine(fld, Path.GetFileName(file));
-                        Application.Current.Dispatcher.Invoke(DispatcherPriority.Background, new Action(() => { vm.StatusBottom = $"Copying {file}"; }));
-                        File.Move(file, newFile);
-                        folder.Files.Remove(file);
+                            var newFile = Path.Combine(fld, Path.GetFileName(kvp.Key));
+                            Application.Current.Dispatcher.Invoke(DispatcherPriority.Background, new Action(() => { vm.StatusBottom = $"Copying {kvp.Key}"; }));
+                            try
+                            {
+                                File.Move(kvp.Key, newFile);
+                            }
+                            catch (Exception e)
+                            {
+                                Console.WriteLine(e);
+                                throw;
+                            }
+                            folder.Files.Remove(kvp.Key);
+                        }
+                        
                     }
                     catch (Exception e)
                     {

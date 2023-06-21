@@ -6,7 +6,7 @@
         public const string FolderDeletedName = "_DeletedBackup";
         public const string FolderSavedName = "_Saved";
         public const string FolderFavName = "_FavPackViewer";
-        public const string FolderAutoRemoveName = "_ViewedPackViewer";
+        public const string FolderAutoRemoveName = "_DeletedPackViewer";
 
         // Do not save folder structue if number of folders below the limit
         public const int MinNumberOfFoldersToCache = 20;
