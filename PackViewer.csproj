@@ -36,6 +36,8 @@
     <ApplicationIcon>Resources\icons8_open_box.ico</ApplicationIcon>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
     <SupportedOSPlatformVersion>8.0</SupportedOSPlatformVersion>
+    <AssemblyVersion>2.0.0.0</AssemblyVersion>
+    <FileVersion>2.0.0.0</FileVersion>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System.Net" />
