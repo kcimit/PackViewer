@@ -19,4 +19,9 @@
     <PackageReference Include="System.Drawing.Common" Version="7.0.0" />
   </ItemGroup>
 
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="xcopy /y /d  $(ProjectDir)LibJpegTurboNetRuntime\win-x64\*.dll $(ProjectDir)$(OutDir)win-x64\"/>
+    <Exec Command="xcopy /y /d  $(ProjectDir)LibJpegTurboNetRuntime\win-x86\*.dll $(ProjectDir)$(OutDir)win-x86\"/>
+  </Target>
+
 </Project>

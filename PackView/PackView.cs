@@ -69,6 +69,8 @@ namespace PackViewer
         string _startFile;
         
         public static bool IsRaw(string file) => file.ToLower().EndsWith("cr2") || file.ToLower().EndsWith("cr3") || file.ToLower().EndsWith("arw") || file.ToLower().EndsWith("rw2");
+        public static bool IsJpeg(string file) => file.ToLower().EndsWith(".jpg") || file.ToLower().EndsWith(".jpeg");
+
         public List<string> GetCurrentFolderImages
         {
             get
@@ -217,7 +219,7 @@ namespace PackViewer
                     fromCache = false;
                     byte[] array = new byte[new FileInfo(file).Length];
                     FileOps.ReadWholeArray(BitmapStream, array);
-                    if (IsJpegFile(file))
+                    if (IsJpeg(file))
                         rot = GetOrientation(array);
                     else
                         rot = Rotation.Rotate0;
@@ -225,12 +227,7 @@ namespace PackViewer
                 }
             }
         }
-
-        private static bool IsJpegFile(string file)
-        {
-            return file.EndsWith(".jpg") || file.EndsWith(".jpeg");
-        }
-
+        
         private static Rotation GetOrientation(byte [] array)
         {
             Rotation rot = Rotation.Rotate0;
@@ -321,7 +318,7 @@ namespace PackViewer
                                               action.Folder.Cachesize += array.Length;
                                               _cacheSize += array.Length;
                                               
-                                              var rot = IsJpegFile(action.File) ? GetOrientation(array):Rotation.Rotate0;
+                                              var rot = IsJpeg(action.File) ? GetOrientation(array):Rotation.Rotate0;
                                               action.Folder.RotCache.Add(action.File, rot);
                                           }
                                       }
