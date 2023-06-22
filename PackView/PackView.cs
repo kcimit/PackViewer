@@ -11,7 +11,6 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
-using static System.Windows.Forms.AxHost;
 
 namespace PackViewer
 {
@@ -69,7 +68,7 @@ namespace PackViewer
         Task _queueTask;
         string _startFile;
         
-        public static bool IsRaw(string file) => file.ToLower().EndsWith("cr2") || file.ToLower().EndsWith("cr3") || file.ToLower().EndsWith("arw");
+        public static bool IsRaw(string file) => file.ToLower().EndsWith("cr2") || file.ToLower().EndsWith("cr3") || file.ToLower().EndsWith("arw") || file.ToLower().EndsWith("rw2");
         public List<string> GetCurrentFolderImages
         {
             get

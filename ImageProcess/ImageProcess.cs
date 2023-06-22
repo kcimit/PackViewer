@@ -9,14 +9,11 @@ using Sdcb.LibRaw;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows;
-using static System.Formats.Asn1.AsnWriter;
-using System.Windows.Media.Media3D;
 
 namespace PackViewer
 {
     public static class ImageProcess
     {
-        static IntPtr librawHandler;
         static TJDecompressor _decompressor;
 
         public static void DecompressRaw(byte[] bitmapStream, System.Windows.Controls.Image dImage)

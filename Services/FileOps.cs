@@ -28,7 +28,7 @@ namespace PackViewer
         }
         public static List<string> GetFiles(string currentFolder)
         {
-            string[] extensions = new[] { ".jpg", ".jpeg", ".cr2", ".cr3", ".arw" };
+            string[] extensions =  { ".jpg", ".jpeg", ".cr2", ".cr3", ".arw", ".rw2" };
 
             FileInfo[] files =
                 (new DirectoryInfo(currentFolder)).GetFiles("*.*", SearchOption.TopDirectoryOnly)

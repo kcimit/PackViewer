@@ -13,6 +13,12 @@ namespace PackViewer
             var input = string.Empty;
             if (e.Args.Length == 0)
             {
+                MessageBox.Show("No image file specified");
+                Environment.Exit(0);
+            }
+
+            /*if (e.Args.Length == 0)
+            {
                 using (var dialog = new System.Windows.Forms.FolderBrowserDialog
                 {
                     Description = "Select starting folder with images",
@@ -31,8 +37,8 @@ namespace PackViewer
                     }
                 }
             }
-            else
-                input = e.Args[0];
+            else*/
+            input = e.Args[0];
 
             var wnd = new MainWindow(input);
             wnd.Show();
