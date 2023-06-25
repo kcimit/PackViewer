@@ -68,7 +68,7 @@
                         <Style TargetType="Path">
                             <Setter Property="Fill" Value="Gray" />
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsSaved}" Value="True">
+                                <DataTrigger Binding="{Binding IsSaved, Mode=TwoWay}" Value="True">
                                     <Setter Property="Fill" Value="Red" />
                                 </DataTrigger>
                             </Style.Triggers>
@@ -86,7 +86,7 @@
                     <Style TargetType="Path">
                         <Setter Property="Fill" Value="Gray" />
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsFileSaved}" Value="True">
+                                <DataTrigger Binding="{Binding IsFileSaved, Mode=TwoWay}" Value="True">
                                 <Setter Property="Fill" Value="Red" />
                             </DataTrigger>
                         </Style.Triggers>
@@ -121,7 +121,7 @@
                     <Style TargetType="Path">
                         <Setter Property="Fill" Value="Gray" />
                         <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsFileDeleted}" Value="True">
+                                <DataTrigger Binding="{Binding IsFileDeleted, Mode=TwoWay}" Value="True">
                                 <Setter Property="Fill" Value="Red" />
                             </DataTrigger>
                         </Style.Triggers>
@@ -140,7 +140,7 @@
                     <Style TargetType="Path">
                         <Setter Property="Fill" Value="Gray" />
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsFolderInTrash}" Value="True">
+                                <DataTrigger Binding="{Binding IsFolderInTrash, Mode=TwoWay}" Value="True">
                                 <Setter Property="Fill" Value="Red" />
                             </DataTrigger>
                         </Style.Triggers>

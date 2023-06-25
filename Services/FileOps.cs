@@ -152,12 +152,11 @@ namespace PackViewer
 
         internal static void ProceedWithFiles(ViewModel vm, List<PackFolder> folders)
         {
-            foreach (var folder in folders.Where(r => r.Status != Status.None))
+            foreach (var folder in folders)
                 foreach (var kvp in folder.ImagesStatus.Where(r=>r.Value!= Status.None))
                 {
                     try
                     {
-                        
                         var fld = Path.GetDirectoryName(kvp.Key);
                         if (fld == null) continue;
                         if (kvp.Value == Status.None)

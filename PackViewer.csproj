@@ -5,8 +5,8 @@
     <TargetFramework>net7.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <UseWPF>true</UseWPF>
-    <AssemblyVersion>2.0.0.0</AssemblyVersion>
-    <FileVersion>2.0.0.0</FileVersion>
+    <AssemblyVersion>2.0.0.1</AssemblyVersion>
+    <FileVersion>2.0.0.1</FileVersion>
     <ApplicationIcon>Resources\icons8_open_box.ico</ApplicationIcon>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
     <Platforms>AnyCPU;x64</Platforms>
@@ -20,8 +20,8 @@
   </ItemGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="xcopy /y /d  $(ProjectDir)LibJpegTurboNetRuntime\win-x64\*.dll $(ProjectDir)$(OutDir)win-x64\"/>
-    <Exec Command="xcopy /y /d  $(ProjectDir)LibJpegTurboNetRuntime\win-x86\*.dll $(ProjectDir)$(OutDir)win-x86\"/>
+    <Exec Command="xcopy /y /d  $(ProjectDir)LibJpegTurboNetRuntime\win-x64\*.dll $(ProjectDir)$(OutDir)win-x64\" />
+    <Exec Command="xcopy /y /d  $(ProjectDir)LibJpegTurboNetRuntime\win-x86\*.dll $(ProjectDir)$(OutDir)win-x86\" />
   </Target>
 
 </Project>

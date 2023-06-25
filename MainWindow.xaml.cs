@@ -17,6 +17,8 @@ namespace PackViewer
         ViewModel PackView;
 
         readonly int FastForwardValue = 10;
+        private readonly bool enableCachingFolderContent = false;
+
         List<string> filesInFolder;
         int currentIndex;
         string _file;
@@ -73,6 +75,7 @@ namespace PackViewer
 
                 BitmapStream = null;
                 PackView.IsFileSaved = PackView.GetFileStatus(file)==Status.Save;
+                PackView.IsFileDeleted = PackView.GetFileStatus(file) == Status.Delete;
                 PackView.AddToAutoRemoveList(filesInFolder[currentIndex]);
             }
             catch (Exception e) {
@@ -270,7 +273,7 @@ namespace PackViewer
                 try
                 {
                     PackView.Init(_file, token);
-                    PackView.BuildFolderList(token);
+                    PackView.BuildFolderList(token, enableCachingFolderContent);
                     ShowStatus(false);
                 }
                 catch (Exception e)

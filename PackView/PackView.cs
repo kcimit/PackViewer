@@ -57,8 +57,7 @@ namespace PackViewer
         public Status GetFileStatus(string file)
         {
             var stat = Status.None;
-            if (_currentFolder != null)
-                stat =_currentFolder.GetStatus(file);
+            stat =_currentFolder.GetStatus(file);
             return stat;
         }
 
@@ -67,7 +66,8 @@ namespace PackViewer
 
         Task _queueTask;
         string _startFile;
-        
+        private bool _enableCachingFolderContent;
+
         public static bool IsRaw(string file) => file.ToLower().EndsWith("cr2") || file.ToLower().EndsWith("cr3") || file.ToLower().EndsWith("arw") || file.ToLower().EndsWith("rw2");
         public static bool IsJpeg(string file) => file.ToLower().EndsWith(".jpg") || file.ToLower().EndsWith(".jpeg");
 
@@ -78,6 +78,11 @@ namespace PackViewer
                 var nextImageFolder = new PackFolder();
                 if (_indexOfCurrentFolder + 1 < _folders.Count)
                     nextImageFolder = _folders[_indexOfCurrentFolder + 1];
+                
+                // Always cache images in the first folder
+                if (_indexOfCurrentFolder==0)
+                    EnqueuLoadingFiles(_currentFolder, _folders[_indexOfCurrentFolder]);
+
                 EnqueuLoadingFiles(_currentFolder, nextImageFolder);
                 return _currentFolder.Files; 
             }
@@ -93,8 +98,8 @@ namespace PackViewer
         private void EnqueuLoadingFiles(PackFolder currentFolder, PackFolder nextImageFolder)
         {
             // Prevent caching, if still need to get contents of all the subfolders
-            if (!_allFoldersAreRead)
-                return;
+            //if (!_allFoldersAreRead)
+            //    return;
 
             if (!currentFolder.HasCache)
             {
@@ -279,7 +284,7 @@ namespace PackViewer
         }
         public void Init(string file, System.Threading.CancellationToken token)
         {
-            using (Process proc = Process.GetCurrentProcess())
+            using (var proc = Process.GetCurrentProcess())
             {
                 _totalMemory = proc.PrivateMemorySize64;
             }
@@ -294,41 +299,41 @@ namespace PackViewer
         private void StartQueueTask(System.Threading.CancellationToken token)
         {
             _queueTask = Task.Factory.StartNew(() =>
-              {
-                  while (true && !token.IsCancellationRequested)
-                  {
-                      StatusTop = Enqueued == 0 ? "" : $"Caching: {Enqueued}";
+            {
+                while (true && !token.IsCancellationRequested)
+                {
+                    StatusTop = Enqueued == 0 ? "" : $"Caching: {Enqueued}";
 
-                      lock (_imageLoadingQueue)
-                      {
-                          if (_imageLoadingQueue.Count > 0)
-                          {
-                              var action = _imageLoadingQueue.Dequeue();
-                              if (action != null && action.Action == ActionType.LoadImage)
-                              {
-                                  try
-                                  {
-                                      if (!action.Folder.ImagesCache.ContainsKey(action.File))
-                                      {
-                                          using (Stream BitmapStream = System.IO.File.Open(action.File, System.IO.FileMode.Open, FileAccess.Read))
-                                          {
-                                              byte[] array = new byte[new FileInfo(action.File).Length];
-                                              FileOps.ReadWholeArray(BitmapStream, array);
-                                              action.Folder.ImagesCache.Add(action.File, array);
-                                              action.Folder.Cachesize += array.Length;
-                                              _cacheSize += array.Length;
-                                              
-                                              var rot = IsJpeg(action.File) ? GetOrientation(array):Rotation.Rotate0;
-                                              action.Folder.RotCache.Add(action.File, rot);
-                                          }
-                                      }
-                                  }
-                                  catch { }
-                              }
-                          }
-                      }
-                  }
-              });
+                    lock (_imageLoadingQueue)
+                    {
+                        if (_imageLoadingQueue.Count <= 0) continue;
+                        var action = _imageLoadingQueue.Dequeue();
+                        if (action == null || action.Action != ActionType.LoadImage) continue;
+                        try
+                        {
+                            if (!action.Folder.ImagesCache.ContainsKey(action.File))
+                            {
+                                using (Stream bitmapStream = System.IO.File.Open(action.File,
+                                           System.IO.FileMode.Open, FileAccess.Read))
+                                {
+                                    byte[] array = new byte[new FileInfo(action.File).Length];
+                                    FileOps.ReadWholeArray(bitmapStream, array);
+                                    action.Folder.ImagesCache.Add(action.File, array);
+                                    action.Folder.Cachesize += array.Length;
+                                    _cacheSize += array.Length;
+
+                                    var rot = IsJpeg(action.File) ? GetOrientation(array) : Rotation.Rotate0;
+                                    action.Folder.RotCache.Add(action.File, rot);
+                                }
+                            }
+                        }
+                        catch (Exception ex) 
+                        {
+                            Console.WriteLine(ex.Message);
+                        }
+                    }
+                }
+            });
         }
 
         private void AddFolders(System.Threading.CancellationToken token, string dir, string imageFolder, ref int curCount)
@@ -368,8 +373,9 @@ namespace PackViewer
             _folders.Add(new PackFolder(dir, f));
         }
 
-        public void BuildFolderList(System.Threading.CancellationToken token)
+        public void BuildFolderList(System.Threading.CancellationToken token, bool enableCachingFolderContent)
         {
+            _enableCachingFolderContent=enableCachingFolderContent;
             _currentFolder = new PackFolder();
             _indexOfCurrentFolder = -1;
             _folders = new List<PackFolder>();
@@ -441,22 +447,37 @@ namespace PackViewer
 
         private void ReadCacheFile()
         {
-            try
+            if (_enableCachingFolderContent)
             {
-                var fileCache = Path.Combine(_rootFolder, "cacheFolder.json");
-                if (File.Exists(fileCache))
+                try
                 {
-                    var r = File.ReadAllText(fileCache);
-                    _cache = JsonConvert.DeserializeObject<CachedFiles>(r);
+                    var fileCache = Path.Combine(_rootFolder, "cacheFolder.json");
+                    if (File.Exists(fileCache))
+                    {
+                        var r = File.ReadAllText(fileCache);
+                        _cache = JsonConvert.DeserializeObject<CachedFiles>(r);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine(ex.Message);
                 }
             }
-            catch (Exception ex)
+            else
             {
-                Debug.WriteLine(ex.Message);
+                try
+                {
+                    var fileCache = Path.Combine(_rootFolder, "cacheFolder.json");
+                    if (File.Exists(fileCache))
+                        File.Delete(fileCache);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine(ex.Message);
+                }
             }
 
-            if (_cache == null)
-                _cache = new CachedFiles();
+            _cache ??= new CachedFiles();
         }
 
         private void WriteCacheFile()
@@ -503,7 +524,8 @@ namespace PackViewer
                 else
                     FileOps.ProceedWithDeletion(this, _folders, Status.Delete);
             }
-            WriteCacheFile();
+            if (_enableCachingFolderContent)
+                WriteCacheFile();
         }
     }
 }
