@@ -159,7 +159,7 @@ namespace PackViewer
                     {
                         var fld = Path.GetDirectoryName(kvp.Key);
                         if (fld == null) continue;
-                        if (kvp.Value == Status.None)
+                        if (kvp.Value == Status.Save)
                         {
                             fld = Path.Combine(fld, Global.FolderFavName);
                             if (!Directory.Exists(fld))

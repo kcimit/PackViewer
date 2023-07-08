@@ -118,9 +118,7 @@ namespace PackViewer
                 OnPropertyChanged(nameof(StatusTop));
             }
         }
-
-        public object SizeInMb { get; internal set; }
-
+        
         public ViewModel()
         {
             uiSynchronizationContext = SynchronizationContext.Current;

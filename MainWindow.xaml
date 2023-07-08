@@ -69,7 +69,7 @@
                             <Setter Property="Fill" Value="Gray" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding IsSaved, Mode=TwoWay}" Value="True">
-                                    <Setter Property="Fill" Value="Red" />
+                                    <Setter Property="Fill" Value="LawnGreen" />
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
@@ -87,7 +87,7 @@
                         <Setter Property="Fill" Value="Gray" />
                         <Style.Triggers>
                                 <DataTrigger Binding="{Binding IsFileSaved, Mode=TwoWay}" Value="True">
-                                <Setter Property="Fill" Value="Red" />
+                                <Setter Property="Fill" Value="LawnGreen" />
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>

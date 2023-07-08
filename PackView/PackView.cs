@@ -105,8 +105,8 @@ namespace PackViewer
             {
                 currentFolder.ImagesCache = new Dictionary<string, byte[]>();
                 currentFolder.Cachesize = 0;
-                if (!currentFolder.HasRotCache)
-                    currentFolder.RotCache = new Dictionary<string, Rotation>();
+                if (!currentFolder.HasMetaCache)
+                    currentFolder.MetaCache = new Dictionary<string, Meta>();
                 foreach (var file in currentFolder.Files)
                     AddImage(file, currentFolder.FullPath);
             }
@@ -114,8 +114,8 @@ namespace PackViewer
             {
                 nextImageFolder.ImagesCache = new Dictionary<string, byte[]>();
                 nextImageFolder.Cachesize = 0;
-                if (!nextImageFolder.HasRotCache)
-                    nextImageFolder.RotCache = new Dictionary<string, Rotation>();
+                if (!nextImageFolder.HasMetaCache)
+                    nextImageFolder.MetaCache = new Dictionary<string, Meta>();
 
                 foreach (var file in nextImageFolder.Files)
                     AddImage(file, nextImageFolder.FullPath);
@@ -168,6 +168,20 @@ namespace PackViewer
             IsSaved = FolderIsSaved;
         }
 
+        public int ImageHeight(string v)
+        {
+            if (_currentFolder.MetaCache.TryGetValue(v, out Meta res))
+                return res.Height;
+            return 0;
+        }
+
+        public int ImageWidth(string v)
+        {
+            if (_currentFolder.MetaCache.TryGetValue(v, out Meta res))
+                return res.Width;
+            return 0;
+        }
+
         internal void SetFileStatus(string v, Status stat)
         {
             if (!_currentFolder.ImagesStatus.ContainsKey(v))
@@ -209,12 +223,12 @@ namespace PackViewer
             }
         }
 
-        internal byte[] GetImage(string file, out Rotation rot, out bool fromCache)
+        internal byte[] GetImage(string file, out Meta meta, out bool fromCache)
         {
             if (_currentFolder.HasCache && _currentFolder.ImagesCache.ContainsKey(file))
             {
-                rot = _currentFolder.RotCache[file];
                 fromCache = true;
+                meta= _currentFolder.MetaCache[file];
                 return _currentFolder.ImagesCache[file];
             }
             else
@@ -224,26 +238,27 @@ namespace PackViewer
                     fromCache = false;
                     byte[] array = new byte[new FileInfo(file).Length];
                     FileOps.ReadWholeArray(BitmapStream, array);
+                    meta = new Meta();
                     if (IsJpeg(file))
-                        rot = GetOrientation(array);
+                        meta.Rotation = GetMeta(array).Rotation;
                     else
-                        rot = Rotation.Rotate0;
+                        meta.Rotation = Rotation.Rotate0;
                     return array;
                 }
             }
         }
         
-        private static Rotation GetOrientation(byte [] array)
+        private static Meta GetMeta(byte [] array)
         {
+            var meta=new Meta();
             Rotation rot = Rotation.Rotate0;
             try
             {
                 using (var reader = new ExifReader(array))
                 {
                     // Get the image thumbnail (if present)
-                    var thumbnailBytes = reader.GetJpegThumbnailBytes();
+                    //var thumbnailBytes = reader.GetJpegThumbnailBytes();
                     reader.GetTagValue(ExifTags.Orientation, out ushort orientation);
-
                     switch (orientation)
                     {
                         case 3:
@@ -262,7 +277,9 @@ namespace PackViewer
                 }
             }
             catch { }
-            return rot;
+
+            meta.Rotation = rot;
+            return meta;
         }
 
         public void AddImage(string file, string key)
@@ -321,9 +338,9 @@ namespace PackViewer
                                     action.Folder.ImagesCache.Add(action.File, array);
                                     action.Folder.Cachesize += array.Length;
                                     _cacheSize += array.Length;
-
-                                    var rot = IsJpeg(action.File) ? GetOrientation(array) : Rotation.Rotate0;
-                                    action.Folder.RotCache.Add(action.File, rot);
+                                    var meta = new Meta();
+                                    meta.Rotation = IsJpeg(action.File) ? GetMeta(array).Rotation : Rotation.Rotate0;
+                                    action.Folder.MetaCache.Add(action.File, meta);
                                 }
                             }
                         }

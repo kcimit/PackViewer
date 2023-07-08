@@ -84,9 +84,11 @@ namespace PackViewer
             }
         }
 
-        internal static void DecompressJpeg(byte[] bitmapStream, System.Windows.Controls.Image dImage, Rotation rot)
+        internal static void DecompressJpeg(byte[] bitmapStream, System.Windows.Controls.Image dImage, ref Meta meta)
         {
             var result = _decompressor.Decompress(bitmapStream, ImageProcess.ConvertPixelFormat(System.Drawing.Imaging.PixelFormat.Format32bppArgb), TJFlags.NONE);
+            meta.Width=result.Width;
+            meta.Height=result.Height;
             using (var bmp = new Bitmap(result.Width, result.Height, System.Drawing.Imaging.PixelFormat.Format32bppArgb))
             {
                 BitmapData bmpData = bmp.LockBits(new System.Drawing.Rectangle(0, 0,
@@ -98,7 +100,7 @@ namespace PackViewer
                 IntPtr pNative = bmpData.Scan0;
                 Marshal.Copy(result.Data, 0, pNative, result.Data.Length);
                 bmp.UnlockBits(bmpData);
-                BitmapSizeOptions szOpt = rot == Rotation.Rotate0 ? BitmapSizeOptions.FromEmptyOptions() : BitmapSizeOptions.FromRotation(rot);
+                BitmapSizeOptions szOpt = meta.Rotation == Rotation.Rotate0 ? BitmapSizeOptions.FromEmptyOptions() : BitmapSizeOptions.FromRotation(meta.Rotation);
                 var src = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(bmp.GetHbitmap(), IntPtr.Zero, System.Windows.Int32Rect.Empty, szOpt);
                 dImage.Source = src;
             }

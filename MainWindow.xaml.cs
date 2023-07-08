@@ -49,12 +49,12 @@ namespace PackViewer
                 var numRetries = 15;
                 byte[] BitmapStream = null;
                 Rotation rot = Rotation.Rotate0;
-
+                Meta meta = new Meta();
                 while (numRetries > 0)
                 {
                     try
                     {
-                        BitmapStream = PackView.GetImage(file, out rot, out fromCache);
+                        BitmapStream = PackView.GetImage(file, out meta, out fromCache);
                         break;
                     }
                     catch
@@ -63,16 +63,16 @@ namespace PackViewer
                         Thread.Sleep(200);
                     }
                 }
-                ShowStatus(fromCache);
-
+                
                 if (BitmapStream == null)
                     throw new Exception($"Cannot access file {file}");
 
                 if (ViewModel.IsRaw(file))
                     ImageProcess.DecompressRaw(BitmapStream, DImage);
                 else
-                    ImageProcess.DecompressJpeg(BitmapStream, DImage, rot);
-
+                    ImageProcess.DecompressJpeg(BitmapStream, DImage, ref meta);
+                
+                ShowStatus(fromCache);
                 BitmapStream = null;
                 PackView.IsFileSaved = PackView.GetFileStatus(file)==Status.Save;
                 PackView.IsFileDeleted = PackView.GetFileStatus(file) == Status.Delete;
@@ -86,7 +86,7 @@ namespace PackViewer
         private void ShowStatus(bool fromCache)
         {
             if (filesInFolder != null)
-                PackView.StatusBottom = $"({currentIndex+1}/{filesInFolder.Count}) [{PackView.CurrentFolderIndex + 1}/{PackView.FoldersCount}] {filesInFolder[currentIndex]} ({PackView.SizeInMb}) {(fromCache ? "*" : "" )}";
+                PackView.StatusBottom = $"({currentIndex+1}/{filesInFolder.Count}) [{PackView.CurrentFolderIndex + 1}/{PackView.FoldersCount}] {filesInFolder[currentIndex]} ({PackView.ImageWidth(filesInFolder[currentIndex])}x{PackView.ImageHeight(filesInFolder[currentIndex])}) {(fromCache ? "*" : "" )}";
         }
 
         private void Window_KeyDown(object sender, KeyEventArgs e)
