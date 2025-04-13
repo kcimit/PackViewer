@@ -12,6 +12,7 @@ namespace PackViewer
         public static List<string> GetDirectories(string path, string searchPattern = "*",
             SearchOption searchOption = SearchOption.AllDirectories)
         {
+
             if (searchOption == SearchOption.TopDirectoryOnly)
                 return Directory.GetDirectories(path, searchPattern).ToList();
 

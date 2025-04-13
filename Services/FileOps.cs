@@ -55,7 +55,11 @@ namespace PackViewer
                 try
                 {
                     var newFolder = Path.Combine(destFolder, folder.FullPath.Replace(rootFolder, ""));
-                    Application.Current.Dispatcher.Invoke(DispatcherPriority.Background, new Action(() => { vm.StatusBottom = $"Copying {folder.FullPath}"; }));
+                    Application.Current.Dispatcher.Invoke(DispatcherPriority.Background, new Action(() =>
+                    {
+                        if (vm != null)
+                            vm.StatusBottom = $"Copying {folder.FullPath}";
+                    }));
                     if (deleteSource)
                         MoveFilesRecursively(folder.FullPath, newFolder);
                     else
@@ -114,7 +118,9 @@ namespace PackViewer
                         skipped++;
                     else
                     {
-                        Application.Current.Dispatcher.Invoke(DispatcherPriority.Background, new Action(() => { vm.StatusBottom = $"Deleting {folder.FullPath}"; }));
+                        Application.Current.Dispatcher.Invoke(DispatcherPriority.Background, new Action(() => { 
+                            if (vm != null) 
+                            vm.StatusBottom = $"Deleting {folder.FullPath}"; }));
                         DeleteFolder(folder.FullPath, folder.Files);
                     }
 
@@ -166,7 +172,11 @@ namespace PackViewer
                                 Directory.CreateDirectory(fld);
 
                             var newFile = Path.Combine(fld, Path.GetFileName(kvp.Key));
-                            Application.Current.Dispatcher.Invoke(DispatcherPriority.Background, new Action(() => { vm.StatusBottom = $"Copying {kvp.Key}"; }));
+                            Application.Current.Dispatcher.Invoke(DispatcherPriority.Background, new Action(() =>
+                            {
+                                if (vm!=null)
+                                    vm.StatusBottom = $"Copying {kvp.Key}";
+                            }));
                             try
                             {
                                 File.Copy(kvp.Key, newFile);
@@ -184,7 +194,10 @@ namespace PackViewer
                                 Directory.CreateDirectory(fld);
 
                             var newFile = Path.Combine(fld, Path.GetFileName(kvp.Key));
-                            Application.Current.Dispatcher.Invoke(DispatcherPriority.Background, new Action(() => { vm.StatusBottom = $"Copying {kvp.Key}"; }));
+                            Application.Current.Dispatcher.Invoke(DispatcherPriority.Background, new Action(() =>
+                            {
+                                if (vm!=null) vm.StatusBottom =$"Copying {kvp.Key}";
+                            }));
                             try
                             {
                                 File.Move(kvp.Key, newFile);

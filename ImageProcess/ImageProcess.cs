@@ -41,7 +41,7 @@ namespace PackViewer
         {
             unsafe
             {
-                fixed (void* data = rgbImage.GetData<byte>())
+                fixed (void* data = rgbImage.AsSpan<byte>())
                 {
                     //SwapRedAndBlue(rgbImage.GetData<byte>(), rgbImage.Width, rgbImage.Height);
                     var dpiX = 96d;
@@ -60,9 +60,9 @@ namespace PackViewer
         {
             unsafe
             {
-                fixed (void* data = rgbImage.GetData<byte>())
+                fixed (void* data = rgbImage.AsSpan<byte>())
                 {
-                    SwapRedAndBlue(rgbImage.GetData<byte>(), rgbImage.Width, rgbImage.Height);
+                    SwapRedAndBlue(rgbImage.AsSpan<byte>(), rgbImage.Width, rgbImage.Height);
                     using Bitmap bmp = new Bitmap(rgbImage.Width, rgbImage.Height, rgbImage.Width * 3,
                         System.Drawing.Imaging.PixelFormat.Format24bppRgb, (IntPtr)data);
                     return new Bitmap(bmp);

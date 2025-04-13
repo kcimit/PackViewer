@@ -15,7 +15,7 @@ namespace PackViewer
     public partial class MainWindow : Window
     {
         ViewModel PackView;
-
+        private FileTask ft;
         readonly int FastForwardValue = 10;
         private readonly bool enableCachingFolderContent = false;
 
@@ -31,7 +31,8 @@ namespace PackViewer
         {
             InitializeComponent();
 
-            PackView = new ViewModel();
+            ft = new FileTask(enableCachingFolderContent);
+            PackView = new ViewModel(ft);
             _file = file;
             DataContext = PackView;
             tokenSource = new CancellationTokenSource();
@@ -133,7 +134,50 @@ namespace PackViewer
                 ShowImage();
             }
         }
+
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            var source = DImage.Source;
+            DImage.Source = null;
+            var cancel = false;
+            var delete = false;
+            var save = false;
+            var deleteOriginal = false;
+
+            var cntDel = PackView.FoldersThrashed;
+            var cntSave = PackView.FoldersSaved;
+
+            if (cntDel != 0 || cntSave != 0)
+            {
+                var confirmationWindow = new ConfirmationWindow();
+                if (confirmationWindow.ShowDialog() == true)
+                {
+                    delete = confirmationWindow.DeleteFolders;
+                    save = confirmationWindow.SaveFolders;
+                    deleteOriginal = confirmationWindow.RemoveOriginalFolders;
+                }
+                else
+                {
+                    cancel = true;
+                }
+            }
+
+            if (cancel)
+            {
+                e.Cancel = true;
+                DImage.Source = source;
+                return;
+            }
+
+            tokenSource.Cancel();
+            while (foldersAsync.Status == TaskStatus.Running)
+                Task.Delay(200);
+            WindowState = WindowState.Minimized;
+            ft.Finalize(PackView, delete, save, deleteOriginal);
+            ImageProcess.Close();
+        }
+
+        private void Window_ClosingOld(object sender, System.ComponentModel.CancelEventArgs e)
         {
             var source = DImage.Source;
             DImage.Source = null;
@@ -177,7 +221,7 @@ namespace PackViewer
             while (foldersAsync.Status == TaskStatus.Running)
                 Task.Delay(200);
             WindowState = WindowState.Minimized;
-            PackView.Finalize(delete, save, deleteOriginal);
+            ft.Finalize(PackView, delete, save, deleteOriginal);
             ImageProcess.Close();
         }
         private void Exit_Click(object sender, RoutedEventArgs e)
@@ -273,7 +317,7 @@ namespace PackViewer
                 try
                 {
                     PackView.Init(_file, token);
-                    PackView.BuildFolderList(token, enableCachingFolderContent);
+                    PackView.BuildFolderList(token);
                     ShowStatus(false);
                 }
                 catch (Exception e)

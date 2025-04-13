@@ -1,0 +1,17 @@
+﻿<Window x:Class="PackViewer.ConfirmationWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Confirmation" Height="170" Width="400">
+    <Grid>
+        <StackPanel Margin="10">
+            <CheckBox x:Name="DeleteFoldersCheckBox" Content="Delete folders marked for deletion" Margin="0,0,0,10" IsChecked="True"/>
+            <CheckBox x:Name="SaveFoldersCheckBox" Content="Save folders marked for save (copies them to _Saved folder)" Margin="0,0,0,10" IsChecked="True"/>
+            <CheckBox x:Name="RemoveOriginalFoldersCheckBox" Content="Remove original folders processed for deletion or saving" Margin="0,0,0,20" IsChecked="True"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="OkButton" Content="Ok" Width="75" Margin="0,0,10,0" Click="OkButton_Click"/>
+                <Button x:Name="DoNothing" Content="Do nothing and close" Width="140" Margin="0,0,10,0" Click="DoNothingButton_Click"/>
+                <Button x:Name="CancelButton" Content="Cancel" Width="75" Click="CancelButton_Click"/>
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</Window>

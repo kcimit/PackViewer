@@ -119,8 +119,9 @@ namespace PackViewer
             }
         }
         
-        public ViewModel()
+        public ViewModel(FileTask fileTask)
         {
+            _ft = fileTask;
             uiSynchronizationContext = SynchronizationContext.Current;
             ControlsEnabled = true;
             IsFolderInTrash = false;

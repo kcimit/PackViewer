@@ -46,6 +46,8 @@ namespace PackViewer
                 if (string.IsNullOrEmpty(a) && string.IsNullOrEmpty(b)) return 0;
                 if (string.IsNullOrEmpty(a)) return -1;
                 if (string.IsNullOrEmpty(b)) return 1;
+                if (a.Length > 10 || b.Length > 10)
+                    return 0;
 
                 return long.Parse(a).CompareTo(long.Parse(b));
             });
