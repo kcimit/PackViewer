@@ -107,7 +107,7 @@ namespace Services
 
             bool? result = fd.ShowDialog();
 
-            return result.Value ? fd.OpenFile() : null;
+            return result == true ? fd.OpenFile() : null;
         }
 
         public string OpenFile(string defaultExtension, string filter, string title, bool multiselect)
@@ -132,7 +132,7 @@ namespace Services
 
             bool? result = fd.ShowDialog();
 
-            return result.Value ? fd.OpenFile() : null;
+            return result == true ? fd.OpenFile() : null;
         }
     }
 
@@ -152,10 +152,13 @@ namespace Services
         }
         public void OnPropertyChanged(string propertyName)
         {
-            uiSynchronizationContext.Post(
-                 o => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName))
-                , null
-              );
+            if (uiSynchronizationContext != null)
+                uiSynchronizationContext.Post(
+                     o => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName))
+                    , null
+                  );
+            else
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
         #region NotifyPropertyChanged Methods

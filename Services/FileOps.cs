@@ -54,7 +54,7 @@ namespace PackViewer
             {
                 try
                 {
-                    var newFolder = Path.Combine(destFolder, folder.FullPath.Replace(rootFolder, ""));
+                    var newFolder = Path.Combine(destFolder, Path.GetRelativePath(rootFolder, folder.FullPath));
                     Application.Current.Dispatcher.Invoke(DispatcherPriority.Background, new Action(() =>
                     {
                         if (vm != null)
@@ -77,13 +77,17 @@ namespace PackViewer
             if (!Directory.Exists(targetPath))
                 Directory.CreateDirectory(targetPath);
 
-            //Now Create all of the directories
             foreach (string dirPath in Directory.GetDirectories(sourcePath, "*", SearchOption.AllDirectories))
-                Directory.CreateDirectory(dirPath.Replace(sourcePath, targetPath));
+            {
+                var relativePath = Path.GetRelativePath(sourcePath, dirPath);
+                Directory.CreateDirectory(Path.Combine(targetPath, relativePath));
+            }
 
-            //Copy all the files & Replaces any files with the same name
-            foreach (string newPath in Directory.GetFiles(sourcePath, "*.*", SearchOption.AllDirectories))
-                File.Copy(newPath, newPath.Replace(sourcePath, targetPath), true);
+            foreach (string filePath in Directory.GetFiles(sourcePath, "*.*", SearchOption.AllDirectories))
+            {
+                var relativePath = Path.GetRelativePath(sourcePath, filePath);
+                File.Copy(filePath, Path.Combine(targetPath, relativePath), true);
+            }
         }
 
         private static void MoveFilesRecursively(string sourcePath, string targetPath)
@@ -91,13 +95,17 @@ namespace PackViewer
             if (!Directory.Exists(targetPath))
                 Directory.CreateDirectory(targetPath);
 
-            //Now Create all of the directories
             foreach (string dirPath in Directory.GetDirectories(sourcePath, "*", SearchOption.AllDirectories))
-                Directory.CreateDirectory(dirPath.Replace(sourcePath, targetPath));
+            {
+                var relativePath = Path.GetRelativePath(sourcePath, dirPath);
+                Directory.CreateDirectory(Path.Combine(targetPath, relativePath));
+            }
 
-            //Copy all the files & Replaces any files with the same name
-            foreach (string newPath in Directory.GetFiles(sourcePath, "*.*", SearchOption.AllDirectories))
-                File.Move(newPath, newPath.Replace(sourcePath, targetPath));
+            foreach (string filePath in Directory.GetFiles(sourcePath, "*.*", SearchOption.AllDirectories))
+            {
+                var relativePath = Path.GetRelativePath(sourcePath, filePath);
+                File.Move(filePath, Path.Combine(targetPath, relativePath), true);
+            }
         }
 
         public static void ProceedWithDeletion(ViewModel vm, List<PackFolder> folders, Status status)
@@ -159,7 +167,7 @@ namespace PackViewer
         internal static void ProceedWithFiles(ViewModel vm, List<PackFolder> folders)
         {
             foreach (var folder in folders)
-                foreach (var kvp in folder.ImagesStatus.Where(r=>r.Value!= Status.None))
+                foreach (var kvp in folder.ImagesStatus.Where(r=>r.Value!= Status.None).ToList())
                 {
                     try
                     {

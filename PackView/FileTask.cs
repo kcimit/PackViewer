@@ -31,7 +31,7 @@ namespace PackViewer
                 try
                 {
                     var r = File.ReadAllText(_tempFile);
-                    _folders = JsonConvert.DeserializeObject<List<PackFolder>>(r);
+                    _folders = JsonConvert.DeserializeObject<List<PackFolder>>(r) ?? new List<PackFolder>();
                     var res = MessageBox.Show(
                         "Unprocessed task exist from unfinished session. Do you want to process the task?",
                         "Question",

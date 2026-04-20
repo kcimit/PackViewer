@@ -14,6 +14,9 @@ namespace PackViewer
 {
     public static class ImageProcess
     {
+        [DllImport("gdi32.dll")]
+        private static extern bool DeleteObject(IntPtr hObject);
+
         static TJDecompressor _decompressor;
 
         public static void DecompressRaw(byte[] bitmapStream, System.Windows.Controls.Image dImage)
@@ -101,13 +104,23 @@ namespace PackViewer
                 Marshal.Copy(result.Data, 0, pNative, result.Data.Length);
                 bmp.UnlockBits(bmpData);
                 BitmapSizeOptions szOpt = meta.Rotation == Rotation.Rotate0 ? BitmapSizeOptions.FromEmptyOptions() : BitmapSizeOptions.FromRotation(meta.Rotation);
-                var src = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(bmp.GetHbitmap(), IntPtr.Zero, System.Windows.Int32Rect.Empty, szOpt);
-                dImage.Source = src;
+                IntPtr hBitmap = bmp.GetHbitmap();
+                try
+                {
+                    var src = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(hBitmap, IntPtr.Zero, System.Windows.Int32Rect.Empty, szOpt);
+                    dImage.Source = src;
+                }
+                finally
+                {
+                    DeleteObject(hBitmap);
+                }
             }
         }
 
         internal static void Close()
         {
+            _decompressor?.Dispose();
+            _decompressor = null;
         }
 
 

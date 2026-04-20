@@ -22,9 +22,10 @@ namespace PackViewer
         {
             Status = Status.None;
             ImagesStatus = new Dictionary<string, Status>();
-            Files=new List<string>();
+            Files = new List<string>();
             ImagesCache = new Dictionary<string, byte[]>();
             MetaCache = new Dictionary<string, Meta>();
+            FullPath = string.Empty;
         }
 
         public Dictionary<string, Status> ImagesStatus { get; set; }
@@ -64,8 +65,11 @@ namespace PackViewer
 
         public long ClearCache()
         {
-            ImagesCache=new Dictionary<string, byte[]>();
-            return Cachesize;
+            var size = Cachesize;
+            ImagesCache = new Dictionary<string, byte[]>();
+            MetaCache = new Dictionary<string, Meta>();
+            Cachesize = 0;
+            return size;
         }
     }
 }

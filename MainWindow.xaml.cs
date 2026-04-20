@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
-using System.Windows.Threading;
 
 namespace PackViewer
 {
@@ -128,7 +127,7 @@ namespace PackViewer
         }
         private void LastImage()
         {
-            if (PackView != null)
+            if (PackView != null && filesInFolder != null)
             {
                 currentIndex = filesInFolder.Count - 1;
                 ShowImage();
@@ -170,56 +169,8 @@ namespace PackViewer
             }
 
             tokenSource.Cancel();
-            while (foldersAsync.Status == TaskStatus.Running)
-                Task.Delay(200);
-            WindowState = WindowState.Minimized;
-            ft.Finalize(PackView, delete, save, deleteOriginal);
-            ImageProcess.Close();
-        }
-
-        private void Window_ClosingOld(object sender, System.ComponentModel.CancelEventArgs e)
-        {
-            var source = DImage.Source;
-            DImage.Source = null;
-            var delete = false;
-            var deleteOriginal = false;
-            var cancel = false;
-            var save = false;
-                        
-            var cntDel = PackView.FoldersThrashed;
-            if (cntDel != 0)
-            {
-                var confirm = MessageBox.Show($"There {cntDel} folder marked for deletion. Do you really want them to delete?", "Confirmation", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
-                if (confirm == MessageBoxResult.Cancel)
-                    cancel = true;
-
-                if (confirm == MessageBoxResult.Yes)
-                    delete=true;
-            }
-            var cntSave = PackView.FoldersSaved;
-            if (cntSave != 0)
-            {
-                var confirm = MessageBox.Show($"There {cntSave} folders marked for save. Do you want them to copy to _Saved folder?", "Confirmation", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
-                if (confirm == MessageBoxResult.Cancel)
-                    cancel=true;
-
-                if (confirm == MessageBoxResult.Yes)
-                {
-                    save = true;
-                    confirm = MessageBox.Show($"Do you want to remove original folders?", "Confirmation", MessageBoxButton.YesNo, MessageBoxImage.Question);
-                    deleteOriginal = confirm == MessageBoxResult.Yes;
-                }
-            }
-            
-            if (cancel)
-            {
-                e.Cancel = true;
-                DImage.Source = source;
-                return;
-            }
-            tokenSource.Cancel();
-            while (foldersAsync.Status == TaskStatus.Running)
-                Task.Delay(200);
+            if (foldersAsync != null)
+                foldersAsync.Wait(TimeSpan.FromSeconds(5));
             WindowState = WindowState.Minimized;
             ft.Finalize(PackView, delete, save, deleteOriginal);
             ImageProcess.Close();
@@ -236,6 +187,7 @@ namespace PackViewer
 
         private void TrashFile()
         {
+            if (filesInFolder == null) return;
             PackView?.SetFileStatus(filesInFolder[currentIndex], Status.Delete);
         }
 
@@ -262,6 +214,7 @@ namespace PackViewer
 
         private void AddFileToFav()
         {
+            if (filesInFolder == null) return;
             PackView?.SetFileStatus(filesInFolder[currentIndex], Status.Save);
         }
 
@@ -310,7 +263,7 @@ namespace PackViewer
                 GetFolderImages();
             }
         }
-        private void GetFolders()
+        private async void GetFolders()
         {
             foldersAsync = Task.Factory.StartNew(() =>
             {
@@ -318,7 +271,6 @@ namespace PackViewer
                 {
                     PackView.Init(_file, token);
                     PackView.BuildFolderList(token);
-                    ShowStatus(false);
                 }
                 catch (Exception e)
                 {
@@ -326,16 +278,13 @@ namespace PackViewer
                 }
             }, token);
 
-            Dispatcher.Invoke(() =>
-            {
-                while (PackView==null || PackView.CanStartView == ReadyStatus.WaitingForFolderList)
-                    Task.Delay(200);
+            while (PackView == null || PackView.CanStartView == ReadyStatus.WaitingForFolderList)
+                await Task.Delay(200);
 
-                if (PackView.CanStartView == ReadyStatus.Failed)
-                    Environment.Exit(0);
+            if (PackView.CanStartView == ReadyStatus.Failed)
+                Environment.Exit(0);
 
-                GetFolderImages();
-            });
+            GetFolderImages();
         }
         private void GetFolderImages()
         {

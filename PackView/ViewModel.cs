@@ -15,9 +15,10 @@ namespace PackViewer
         private string statusBottom;
         private string statusTop;
 
-        public int RightIconSize { get; set; } = 40;
-        public int IconSize { get; set; } = 40;
-        public int IconSpacing { get; set; } = 15;
+        public int RightIconSize { get; set; } = 50;
+        public int IconSize { get; set; } = 50;
+        public int IconSpacing { get; set; } = 25;
+        public int IconSpacingLarge { get; set; } = 80;
 
         public bool IsFolderInTrash
         {

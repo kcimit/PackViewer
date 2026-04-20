@@ -1,16 +1,13 @@
 ﻿using ExifLib;
-using Newtonsoft.Json;
 using Services;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media.Imaging;
-using System.Windows.Threading;
 
 namespace PackViewer
 {
@@ -23,7 +20,7 @@ namespace PackViewer
         ImageQueue _imageLoadingQueue;
         public int StartImageIndex => _startImageIndex;
         public string CurrentFolderName => _currentFolder.FullPath;
-        public int Enqueued => _imageLoadingQueue.Count;
+        public int Enqueued => _imageLoadingQueue?.Count ?? 0;
         public int CurrentFolderIndex => _indexOfCurrentFolder;
         public int FoldersCount => _ft.Folders.Count;
 
@@ -160,14 +157,14 @@ namespace PackViewer
 
         public int ImageHeight(string v)
         {
-            if (_currentFolder.MetaCache.TryGetValue(v, out Meta res))
+            if (_currentFolder?.MetaCache != null && _currentFolder.MetaCache.TryGetValue(v, out Meta res))
                 return res.Height;
             return 0;
         }
 
         public int ImageWidth(string v)
         {
-            if (_currentFolder.MetaCache.TryGetValue(v, out Meta res))
+            if (_currentFolder?.MetaCache != null && _currentFolder.MetaCache.TryGetValue(v, out Meta res))
                 return res.Width;
             return 0;
         }
@@ -295,10 +292,8 @@ namespace PackViewer
         }
         public void Init(string file, System.Threading.CancellationToken token)
         {
-            using (var proc = Process.GetCurrentProcess())
-            {
-                _totalMemory = proc.PrivateMemorySize64;
-            }
+            var memInfo = GC.GetGCMemoryInfo();
+            _totalMemory = memInfo.TotalAvailableMemoryBytes / 2;
             _cacheSize = 0;
             _startFile = file;
             _imageLoadingQueue = new ImageQueue();
@@ -310,37 +305,45 @@ namespace PackViewer
         {
             _queueTask = Task.Factory.StartNew(() =>
             {
-                while (true && !token.IsCancellationRequested)
+                while (!token.IsCancellationRequested)
                 {
-                    StatusTop = Enqueued == 0 ? "" : $"Caching: {Enqueued}";
-
+                    ActionItem action = null;
                     lock (_imageLoadingQueue)
                     {
-                        if (_imageLoadingQueue.Count <= 0) continue;
-                        var action = _imageLoadingQueue.Dequeue();
-                        if (action == null || action.Action != ActionType.LoadImage) continue;
-                        try
+                        StatusTop = _imageLoadingQueue.Count == 0 ? "" : $"Caching: {_imageLoadingQueue.Count}";
+                        if (_imageLoadingQueue.Count > 0)
+                            action = _imageLoadingQueue.Dequeue();
+                    }
+
+                    if (action == null)
+                    {
+                        Thread.Sleep(50);
+                        continue;
+                    }
+
+                    if (action.Action != ActionType.LoadImage) continue;
+
+                    try
+                    {
+                        if (!action.Folder.ImagesCache.ContainsKey(action.File))
                         {
-                            if (!action.Folder.ImagesCache.ContainsKey(action.File))
+                            using (Stream bitmapStream = System.IO.File.Open(action.File,
+                                       System.IO.FileMode.Open, FileAccess.Read))
                             {
-                                using (Stream bitmapStream = System.IO.File.Open(action.File,
-                                           System.IO.FileMode.Open, FileAccess.Read))
-                                {
-                                    byte[] array = new byte[new FileInfo(action.File).Length];
-                                    FileOps.ReadWholeArray(bitmapStream, array);
-                                    action.Folder.ImagesCache.Add(action.File, array);
-                                    action.Folder.Cachesize += array.Length;
-                                    _cacheSize += array.Length;
-                                    var meta = new Meta();
-                                    meta.Rotation = IsJpeg(action.File) ? GetMeta(array).Rotation : Rotation.Rotate0;
-                                    action.Folder.MetaCache.Add(action.File, meta);
-                                }
+                                byte[] array = new byte[new FileInfo(action.File).Length];
+                                FileOps.ReadWholeArray(bitmapStream, array);
+                                action.Folder.ImagesCache.Add(action.File, array);
+                                action.Folder.Cachesize += array.Length;
+                                _cacheSize += array.Length;
+                                var meta = new Meta();
+                                meta.Rotation = IsJpeg(action.File) ? GetMeta(array).Rotation : Rotation.Rotate0;
+                                action.Folder.MetaCache.Add(action.File, meta);
                             }
                         }
-                        catch (Exception ex) 
-                        {
-                            Console.WriteLine(ex.Message);
-                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex.Message);
                     }
                 }
             });
@@ -394,6 +397,7 @@ namespace PackViewer
             {
                 MessageBox.Show("Please open application by passing to it any image file in the folder", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 CanStartView = ReadyStatus.Failed;
+                return;
             }
 
             try
@@ -415,7 +419,7 @@ namespace PackViewer
 
                 _ft.ReadCacheFile();
                 int cnt = 0;
-                AddFolders(token, imageFolder, "", ref cnt);
+                AddFolders(token, imageFolder, imageFolder, ref cnt);
                 if (!_ft.Folders.Any())
                 {
                     MessageBox.Show($"No subdirectories are found in {_ft.RootFolder}", "Problem", MessageBoxButton.OK, MessageBoxImage.Exclamation);
@@ -440,7 +444,11 @@ namespace PackViewer
                     
                 }
                 _ft.Folders = _ft.Folders.OrderBy(r => r.FullPath).ToList();
-                _currentFolder = _ft.Folders.FirstOrDefault(r => r.FullPath.Equals(_currentFolder.FullPath));
+                var currentPath = _currentFolder?.FullPath;
+                if (currentPath != null)
+                    _currentFolder = _ft.Folders.FirstOrDefault(r => r.FullPath.Equals(currentPath)) ?? _ft.Folders[0];
+                else
+                    _currentFolder = _ft.Folders[0];
                 _indexOfCurrentFolder = _ft.Folders.IndexOf(_currentFolder);
 
                 _allFoldersAreRead = true;

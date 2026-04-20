@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace PackViewer
 {
@@ -12,11 +11,11 @@ namespace PackViewer
     {
         public static void Remove<T>(this Queue<T> queue, T itemToRemove) where T : class
         {
-            var list = queue.ToList(); //Needs to be copy, so we can clear the queue
+            var list = queue.ToList();
             queue.Clear();
             foreach (var item in list)
             {
-                if (item == itemToRemove)
+                if (item.Equals(itemToRemove))
                     continue;
 
                 queue.Enqueue(item);
@@ -46,8 +45,8 @@ namespace PackViewer
                 if (string.IsNullOrEmpty(a) && string.IsNullOrEmpty(b)) return 0;
                 if (string.IsNullOrEmpty(a)) return -1;
                 if (string.IsNullOrEmpty(b)) return 1;
-                if (a.Length > 10 || b.Length > 10)
-                    return 0;
+                if (a.Length > 18 || b.Length > 18)
+                    return string.Compare(a, b, StringComparison.Ordinal);
 
                 return long.Parse(a).CompareTo(long.Parse(b));
             });
